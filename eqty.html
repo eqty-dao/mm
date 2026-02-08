@@ -444,7 +444,7 @@ async function fetchMQTTStatus() {
     }
 
     // -------- Tabs --------
-function showTab(tabName) {
+    function showTab(tabName) {
   document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
@@ -453,15 +453,14 @@ function showTab(tabName) {
     sec.classList.toggle('active', sec.id === `tab-${tabName}`);
   });
 
-  if (tabName === 'kucoin' && !window._kucoinLoaded) {
+  // Load data every time tab is clicked
+  if (tabName === 'kucoin') {
     loadKucoinBalance();
     loadKucoinData();
-    window._kucoinLoaded = true;
   }
-  if (tabName === 'gateio' && !window._gateioLoaded) {
-    loadGateioBalance();   // NEW
+  if (tabName === 'gateio') {
+    loadGateioBalance();
     loadGateioData();
-    window._gateioLoaded = true;
   }
 }
 
