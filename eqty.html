@@ -453,25 +453,23 @@ async function fetchMQTTStatus() {
     sec.classList.toggle('active', sec.id === `tab-${tabName}`);
   });
 
-  // Change page title with browser redraw workaround
+  // Create new title element (nuclear option)
+  const oldTitle = document.querySelector('title');
+  const newTitle = document.createElement('title');
+  
   if (tabName === 'docker') {
-    document.title = '\uD83D\uDC33 Docker & Hummingbot Monitor';
+    newTitle.textContent = '🐳 Docker & Hummingbot Monitor';
   } else if (tabName === 'kucoin') {
-    document.title = '\uD83D\uDCC8 KuCoin - EQTY MM stats';
+    newTitle.textContent = '💹 KuCoin - EQTY MM stats';
     loadKucoinBalance();
     loadKucoinData();
   } else if (tabName === 'gateio') {
-    document.title = '\uD83D\uDCC8 Gate.io - EQTY MM stats';
+    newTitle.textContent = '💹 Gate.io - EQTY MM stats';
     loadGateioBalance();
     loadGateioData();
   }
   
-  // Force browser to redraw title (browser bug workaround)
-  setTimeout(() => {
-    const temp = document.title;
-    document.title = '';
-    document.title = temp;
-  }, 0);
+  oldTitle.parentNode.replaceChild(newTitle, oldTitle);
 }
 
     // -------- Helper: render trades table --------
