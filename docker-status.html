@@ -266,10 +266,16 @@
     <!-- KUCOIN TAB -->
     <section id="tab-kucoin" class="tab-content">
       <div class="card">
-        <h2>KuCoin Stats & Trades (last 1 day)</h2>
-        <div id="kucoin-content" class="loading">Loading KuCoin data...</div>
+        <h2>KuCoin Balance</h2>
+        <div id="kucoin-balance" class="loading">Loading KuCoin balance...</div>
       </div>
+
+    <div class="card">
+      <h2>KuCoin Stats & Trades (last 1 day)</h2>
+      <div id="kucoin-content" class="loading">Loading KuCoin data...</div>
+    </div>
     </section>
+
 
     <!-- GATE.IO TAB -->
     <section id="tab-gateio" class="tab-content">
@@ -370,23 +376,25 @@
 
     // -------- Tabs --------
     function showTab(tabName) {
-      document.querySelectorAll('.tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-      });
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
 
-      document.querySelectorAll('.tab-content').forEach(sec => {
-        sec.classList.toggle('active', sec.id === `tab-${tabName}`);
-      });
+  document.querySelectorAll('.tab-content').forEach(sec => {
+    sec.classList.toggle('active', sec.id === `tab-${tabName}`);
+  });
 
-      if (tabName === 'kucoin' && !window._kucoinLoaded) {
-        loadKucoinData();
-        window._kucoinLoaded = true;
-      }
-      if (tabName === 'gateio' && !window._gateioLoaded) {
-        loadGateioData();
-        window._gateioLoaded = true;
-      }
-    }
+  if (tabName === 'kucoin' && !window._kucoinLoaded) {
+    loadKucoinBalance();   // NEW
+    loadKucoinData();
+    window._kucoinLoaded = true;
+  }
+  if (tabName === 'gateio' && !window._gateioLoaded) {
+    loadGateioData();
+    window._gateioLoaded = true;
+  }
+}
+
 
     // -------- Helper: render trades table --------
     function renderTradesTable(containerId, trades) {
@@ -438,6 +446,85 @@
       </table>
     </div>
   `;
+}
+    function renderBalanceTable(containerId, balances) {
+  const el = document.getElementById(containerId);
+
+  if (!Array.isArray(balances) || balances.length === 0) {
+    el.innerHTML = '<div style="color:#6b7280; text-align:center;">No balance data</div>';
+    return;
+  }
+
+  const rows = balances.map(b => `
+    <tr>
+      <td>${b.token || '-'}</td>
+      <td>${b.units ?? '-'}</td>
+      <td>${b.available_units ?? '-'}</td>
+      <td>${b.price ?? '-'}</td>
+      <td>${b.value ?? '-'}</td>
+    </tr>
+  `).join('');
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Total</th>
+            <th>Available</th>
+            <th>Price</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function loadKucoinBalance() {
+  const el = document.getElementById('kucoin-balance');
+  el.classList.remove('error');
+  el.classList.add('loading');
+  el.textContent = 'Loading KuCoin balance...';
+
+  try {
+    // POST through Vercel proxy to /portfolio/state
+    const url = `${API_BASE}?endpoint=${encodeURIComponent('/portfolio/state')}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        account_names: ['cex_mm_kucoin'],
+        connector_names: ['kucoin'],
+        skip_gateway: false,
+        refresh: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Shape: { "cex_mm_kucoin": { "kucoin": [ {token, units, ...}, ... ] } }
+    const balances =
+      data?.cex_mm_kucoin?.kucoin ||
+      [];
+
+    renderBalanceTable('kucoin-balance', balances);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading KuCoin balance: ${error.message}</div>`;
+  }
 }
 
 
