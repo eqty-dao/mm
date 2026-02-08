@@ -1,5 +1,5 @@
 # Ignore configuration file with credentials
-config.js
+!config.js
 
 # Keep the example template
 !config.example.js
