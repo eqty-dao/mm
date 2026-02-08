@@ -468,12 +468,12 @@ function showTab(tabName) {
 
     // -------- Helper: render trades table --------
     function renderTradesTable(containerId, trades) {
-      const container = document.getElementById(containerId);
+  const container = document.getElementById(containerId);
 
-      if (!Array.isArray(trades) || trades.length === 0) {
-        container.innerHTML = '<div style="color:#6b7280; text-align:center;">No trades found</div>';
-        return;
-      }
+  if (!Array.isArray(trades) || trades.length === 0) {
+    container.innerHTML = '<div style="color:#6b7280; text-align:center;">No trades found</div>';
+    return;
+  }
 
   const rows = trades.map(t => {
     const dt = new Date(t.trade_timestamp || t.timestamp || Date.now());
@@ -498,9 +498,9 @@ function showTab(tabName) {
   }).join('');
 
   container.innerHTML = `
-    <div style="overflow-x:auto;">
+    <div style="overflow-x:auto; max-height: 600px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
       <table>
-        <thead>
+        <thead style="position: sticky; top: 0; background: #eff6ff; z-index: 10;">
           <tr>
             <th>Time</th>
             <th>Pair</th>
@@ -515,8 +515,13 @@ function showTab(tabName) {
         </tbody>
       </table>
     </div>
+    <div style="margin-top: 10px; text-align: center; color: #6b7280; font-size: 13px;">
+      Showing ${trades.length} trade${trades.length !== 1 ? 's' : ''}
+    </div>
   `;
 }
+
+
     function renderBalanceTable(containerId, balances) {
   const el = document.getElementById(containerId);
 
