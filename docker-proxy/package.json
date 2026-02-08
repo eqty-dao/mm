@@ -1,0 +1,11 @@
+{
+  "name": "docker-proxy",
+  "version": "1.0.0",
+  "description": "Serverless proxy for Docker API",
+  "main": "api/docker.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
+
