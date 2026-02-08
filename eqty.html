@@ -453,7 +453,7 @@ async function fetchMQTTStatus() {
     sec.classList.toggle('active', sec.id === `tab-${tabName}`);
   });
 
-// Change page title based on active tab
+  // Change page title with browser redraw workaround
   if (tabName === 'docker') {
     document.title = '\uD83D\uDC33 Docker & Hummingbot Monitor';
   } else if (tabName === 'kucoin') {
@@ -465,6 +465,13 @@ async function fetchMQTTStatus() {
     loadGateioBalance();
     loadGateioData();
   }
+  
+  // Force browser to redraw title (browser bug workaround)
+  setTimeout(() => {
+    const temp = document.title;
+    document.title = '';
+    document.title = temp;
+  }, 0);
 }
 
     // -------- Helper: render trades table --------
