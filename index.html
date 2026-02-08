@@ -455,13 +455,13 @@ async function fetchMQTTStatus() {
 
 // Change page title based on active tab
   if (tabName === 'docker') {
-    document.title = '🐳 Docker & Hummingbot Monitor';
+    document.title = '\uD83D\uDC33 Docker & Hummingbot Monitor';
   } else if (tabName === 'kucoin') {
-    document.title = '💹 KuCoin - EQTY MM stats';
+    document.title = '\uD83D\uDCC8 KuCoin - EQTY MM stats';
     loadKucoinBalance();
     loadKucoinData();
   } else if (tabName === 'gateio') {
-    document.title = '💹 Gate.io - EQTY MM stats';
+    document.title = '\uD83D\uDCC8 Gate.io - EQTY MM stats';
     loadGateioBalance();
     loadGateioData();
   }
