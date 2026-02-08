@@ -26,7 +26,7 @@ Frontend calls look like:
 GitHub Pages (browser)
     → Vercel proxy (with secrets)
         → https://hummingbot-api.eqty.pro/...
-
+```
 Features
 Docker Tab
 Shows whether Docker is running (via /docker/running).
@@ -73,13 +73,14 @@ This repo assumes you have a separate Vercel project that acts as an authenticat
 1.1 Create the proxy project
 On your machine:
 
-bash
+```
 mkdir docker-proxy
 cd docker-proxy
 mkdir api
+```
 Create api/docker.js:
 
-javascript
+```
 // api/docker.js
 export default async function handler(req, res) {
   const allowedOrigin = 'https://zolpho.github.io';  // your GitHub Pages origin
@@ -132,9 +133,10 @@ export default async function handler(req, res) {
     });
   }
 }
+```
 Create package.json:
 
-json
+```
 {
   "name": "docker-proxy",
   "version": "1.0.0",
@@ -145,41 +147,47 @@ json
     "deploy": "vercel --prod"
   }
 }
+```
 Create .gitignore:
 
-text
+```
 .vercel
 node_modules
 .env
 .env.local
+```
 Create a minimal vercel.json:
 
-json
+```
 {
   "version": 2
 }
+```
 1.2 Deploy to Vercel
 Install and log in:
 
-bash
+```
 npm install -g vercel
-
 cd docker-proxy
 vercel login
 vercel
+```
 Follow prompts, then set environment variables:
 
-bash
+```
 vercel env add API_USERNAME production
 vercel env add API_PASSWORD production
+```
 Deploy to production:
 
-bash
+```
 vercel --prod
+```
 You’ll get an aliased URL like:
 
-text
+```
 https://docker-proxy-eta.vercel.app
+```
 This is your API_BASE used by the frontend.
 
 2. Frontend (this repo)
@@ -188,12 +196,13 @@ The main page is docker-status.html. It:
 
 Defines the proxy base:
 
-javascript
+```
 const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
 const REFRESH_INTERVAL = 120000; // 120 seconds
+```
 Uses a generic helper:
 
-javascript
+```
 async function fetchWithAuth(endpoint) {
   const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
   const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -202,6 +211,7 @@ async function fetchWithAuth(endpoint) {
   }
   return await response.json();
 }
+```
 Calls:
 
 fetchWithAuth('/docker/running')
@@ -218,7 +228,7 @@ No config file or secrets are generated in the workflow anymore.
 
 Example workflow (.github/workflows/deploy.yml):
 
-text
+```
 name: Deploy to GitHub Pages
 
 on:
@@ -240,6 +250,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
+```
 Configure GitHub Pages:
 
 Repo → Settings → Pages
