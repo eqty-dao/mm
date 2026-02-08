@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker & Hummingbot Monitor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status-running {
+      background: #10b981;
+      color: white;
+    }
+
+    .status-stopped {
+      background: #ef4444;
+      color: white;
+    }
+
+    .status-unknown {
+      background: #6b7280;
+      color: white;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .container-list {
+      display: grid;
+      gap: 15px;
+    }
+
+    .container-item {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .container-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .container-details {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6b7280;
+    }
+
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .last-update {
+      text-align: right;
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .refresh-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+
+    .tab {
+      background: #e5e7eb;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .tab.active {
+      background: #4f46e5;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Tables for trades */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #eff6ff;
+      font-weight: 600;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .pill-buy {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .pill-sell {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🐳 Docker & Hummingbot Monitor</h1>
+
+      <!-- Tabs -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="docker" onclick="showTab('docker')">Docker</button>
+        <button class="tab" data-tab="kucoin" onclick="showTab('kucoin')">KuCoin</button>
+        <button class="tab" data-tab="gateio" onclick="showTab('gateio')">Gate.io</button>
+      </nav>
+
+      <div id="docker-status">
+        <span class="status-badge status-unknown">Checking...</span>
+      </div>
+    </header>
+
+    <!-- DOCKER TAB -->
+    <section id="tab-docker" class="tab-content active">
+  <div class="card">
+    <div class="refresh-info">
+      Auto-refreshing every 120 seconds
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Docker Service Status</h2>
+    <div id="docker-info" class="loading">Loading...</div>
+  </div>
+
+  <!-- NEW MQTT STATUS CARD -->
+  <div class="card">
+    <h2>MQTT Status</h2>
+    <div id="mqtt-info" class="loading">Loading...</div>
+  </div>
+
+  <div class="card">
+    <h2>Active Containers</h2>
+    <div id="containers-info" class="loading">Loading...</div>
+  </div>
+
+  <div class="last-update" id="last-update"></div>
+</section>
+
+    <!-- KUCOIN TAB -->
+    <section id="tab-kucoin" class="tab-content">
+      <div class="card">
+        <h2>KuCoin Balance</h2>
+        <div id="kucoin-balance" class="loading">Loading KuCoin balance...</div>
+      </div>
+
+    <div class="card">
+      <h2>KuCoin Stats & Trades (last 1 day)</h2>
+      <div id="kucoin-content" class="loading">Loading KuCoin data...</div>
+    </div>
+    </section>
+
+
+    <!-- GATE.IO TAB -->
+    <section id="tab-gateio" class="tab-content">
+      <div class="card">
+        <h2>Gate.io Balance</h2>
+        <div id="gateio-balance" class="loading">Loading Gate.io balance...</div>
+      </div>
+
+      <div class="card">
+        <h2>Gate.io Stats & Trades</h2>
+        <div id="gateio-content" class="loading">Loading Gate.io data...</div>
+      </div>
+  </section>
+
+  </div>
+
+  <script>
+    // Vercel proxy base (server-side credentials)
+    const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
+    const REFRESH_INTERVAL = 120000;
+
+    // Generic fetch via proxy
+    async function fetchWithAuth(endpoint) {
+      const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
+    }
+
+    // -------- Docker tab logic --------
+    async function checkDockerStatus() {
+      try {
+        const data = await fetchWithAuth('/docker/running');
+        const statusBadge = document.getElementById('docker-status');
+        const dockerInfo = document.getElementById('docker-info');
+
+        const isRunning =
+          data === true ||
+          data === 'true' ||
+          (typeof data === 'object' && (data.running || data.status === 'running'));
+
+        statusBadge.innerHTML = isRunning
+          ? '<span class="status-badge status-running">✓ Running</span>'
+          : '<span class="status-badge status-stopped">✗ Stopped</span>';
+
+        dockerInfo.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (error) {
+        document.getElementById('docker-status').innerHTML =
+          '<span class="status-badge status-unknown">Error</span>';
+        document.getElementById('docker-info').innerHTML =
+          `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+
+    async function fetchActiveContainers() {
+      try {
+        const data = await fetchWithAuth('/docker/active-containers');
+        const containersDiv = document.getElementById('containers-info');
+
+        if (Array.isArray(data) && data.length > 0) {
+          containersDiv.innerHTML = `
+            <div class="container-list">
+              ${data.map(container => `
+                <div class="container-item">
+                  <div class="container-name">${container.name || container.Names || 'Unnamed Container'}</div>
+                  <div class="container-details">
+                    ${container.id || container.Id ? `ID: ${(container.id || container.Id).substring(0, 12)}` : ''}
+                    ${container.status || container.Status ? ` | Status: ${container.status || container.Status}` : ''}
+                    ${container.image || container.Image ? ` | Image: ${container.image || container.Image}` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #f0fdf4; border-radius: 6px; color: #15803d; font-size: 14px;">
+              Total active containers: ${data.length}
+            </div>
+          `;
+        } else if (Array.isArray(data) && data.length === 0) {
+          containersDiv.innerHTML = '<div style="color: #6b7280; text-align: center;">No active containers found</div>';
+        } else {
+          containersDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        document.getElementById('containers-info').innerHTML =
+          `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+async function fetchMQTTStatus() {
+  try {
+    const data = await fetchWithAuth('/bot-orchestration/mqtt');
+    const mqttDiv = document.getElementById('mqtt-info');
+
+    // Extract data
+    const mqttData = data?.data || data;
+    const connected = mqttData.mqtt_connected === true || mqttData.client_state === 'connected';
+    const activeBots = mqttData.active_bots || [];
+    const discoveredBots = mqttData.discovered_bots || [];
+    const brokerHost = mqttData.broker_host || '-';
+    const brokerPort = mqttData.broker_port || '-';
+
+    const statusBadge = connected
+      ? '<span class="status-badge status-running">✓ Connected</span>'
+      : '<span class="status-badge status-stopped">✗ Disconnected</span>';
+
+    mqttDiv.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <strong>Connection Status:</strong> ${statusBadge}
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+        <div>
+          <strong>Broker:</strong> ${brokerHost}:${brokerPort}
+        </div>
+        <div>
+          <strong>Active Bots:</strong> ${activeBots.length}
+        </div>
+        <div>
+          <strong>Discovered Bots:</strong> ${discoveredBots.length}
+        </div>
+      </div>
+      ${activeBots.length > 0 ? `
+        <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; margin-top: 10px;">
+          <strong style="color: #15803d;">Active Bots:</strong>
+          <div style="margin-top: 5px; color: #166534; font-size: 13px; font-family: monospace;">
+            ${activeBots.map(bot => `<div>• ${bot}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+      ${discoveredBots.length > 0 ? `
+        <div style="background: #eff6ff; padding: 10px; border-radius: 6px; margin-top: 10px;">
+          <strong style="color: #1e40af;">Discovered Bots:</strong>
+          <div style="margin-top: 5px; color: #1e3a8a; font-size: 13px; font-family: monospace;">
+            ${discoveredBots.map(bot => `<div>• ${bot}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+  } catch (error) {
+    document.getElementById('mqtt-info').innerHTML =
+      `<div class="error">Error: ${error.message}</div>`;
+  }
+}
+
+
+    function updateTimestamp() {
+      const now = new Date();
+      document.getElementById('last-update').textContent =
+        `Last updated: ${now.toLocaleString()}`;
+    }
+
+    async function refreshAll() {
+      await Promise.all([
+        checkDockerStatus(),
+        fetchActiveContainers(),
+	fetchMQTTStatus()         // NEW
+      ]);
+      updateTimestamp();
+    }
+
+    // -------- Tabs --------
+function showTab(tabName) {
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+
+  document.querySelectorAll('.tab-content').forEach(sec => {
+    sec.classList.toggle('active', sec.id === `tab-${tabName}`);
+  });
+
+  if (tabName === 'kucoin' && !window._kucoinLoaded) {
+    loadKucoinBalance();
+    loadKucoinData();
+    window._kucoinLoaded = true;
+  }
+  if (tabName === 'gateio' && !window._gateioLoaded) {
+    loadGateioBalance();   // NEW
+    loadGateioData();
+    window._gateioLoaded = true;
+  }
+}
+
+
+    // -------- Helper: render trades table --------
+    function renderTradesTable(containerId, trades) {
+  const container = document.getElementById(containerId);
+
+  if (!Array.isArray(trades) || trades.length === 0) {
+    container.innerHTML = '<div style="color:#6b7280; text-align:center;">No trades found</div>';
+    return;
+  }
+
+  const rows = trades.map(t => {
+    const dt = new Date(t.trade_timestamp || t.timestamp || Date.now());
+    const side = (t.trade_type || t.side || '').toUpperCase();
+    const sideClass = side === 'BUY' ? 'pill pill-buy' : 'pill pill-sell';
+
+    const rawQty = t.quantity ?? t.amount ?? '';
+    const cleanQty = typeof rawQty === 'string'
+      ? rawQty.replace(/\.$/, '')
+      : rawQty;
+
+    return `
+      <tr>
+        <td>${dt.toLocaleString()}</td>
+        <td>${t.symbol || '-'}</td>
+        <td><span class="${sideClass}">${side || '-'}</span></td>
+        <td>${t.price ?? '-'}</td>
+        <td>${cleanQty || '-'}</td>
+        <td>${t.market || t.exchange || '-'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="overflow-x:auto; max-height: 600px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
+      <table>
+        <thead style="position: sticky; top: 0; background: #eff6ff; z-index: 10;">
+          <tr>
+            <th>Time</th>
+            <th>Pair</th>
+            <th>Side</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Market</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: 10px; text-align: center; color: #6b7280; font-size: 13px;">
+      Showing ${trades.length} trade${trades.length !== 1 ? 's' : ''}
+    </div>
+  `;
+}
+
+
+    function renderBalanceTable(containerId, balances) {
+  const el = document.getElementById(containerId);
+
+  if (!Array.isArray(balances) || balances.length === 0) {
+    el.innerHTML = '<div style="color:#6b7280; text-align:center;">No balance data</div>';
+    return;
+  }
+
+  const rows = balances.map(b => `
+    <tr>
+      <td>${b.token || '-'}</td>
+      <td>${b.units ?? '-'}</td>
+      <td>${b.available_units ?? '-'}</td>
+      <td>${b.price ?? '-'}</td>
+      <td>${b.value ?? '-'}</td>
+    </tr>
+  `).join('');
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Total</th>
+            <th>Available</th>
+            <th>Price</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function loadKucoinBalance() {
+  const el = document.getElementById('kucoin-balance');
+  el.classList.remove('error');
+  el.classList.add('loading');
+  el.textContent = 'Loading KuCoin balance...';
+
+  try {
+    // POST through Vercel proxy to /portfolio/state
+    const url = `${API_BASE}?endpoint=${encodeURIComponent('/portfolio/state')}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        account_names: ['cex_mm_kucoin'],
+        connector_names: ['kucoin'],
+        skip_gateway: false,
+        refresh: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Shape: { "cex_mm_kucoin": { "kucoin": [ {token, units, ...}, ... ] } }
+    const balances =
+      data?.cex_mm_kucoin?.kucoin ||
+      [];
+
+    renderBalanceTable('kucoin-balance', balances);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading KuCoin balance: ${error.message}</div>`;
+  }
+}
+
+async function loadGateioBalance() {
+  const el = document.getElementById('gateio-balance');
+  el.classList.remove('error');
+  el.classList.add('loading');
+  el.textContent = 'Loading Gate.io balance...';
+
+  try {
+    const endpoint = '/portfolio/state';
+    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+
+    const body = {
+      account_names: ['cex_mm_gate'],  // TODO: Replace with your actual Gate.io account name
+      connector_names: ['gate_io'],
+      skip_gateway: false,
+      refresh: true
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Expecting: { "cex_mm_gateio": { "gate_io": [ {token, units, ...}, ... ] } }
+    const balances =
+      data?.cex_mm_gate?.gate_io ||
+      [];
+
+    renderBalanceTable('gateio-balance', balances);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading Gate.io balance: ${error.message}</div>`;
+  }
+}
+
+    // -------- KuCoin data (using your history endpoint) --------
+    async function loadKucoinData() {
+      const el = document.getElementById('kucoin-content');
+      el.classList.remove('error');
+      el.classList.add('loading');
+      el.textContent = 'Loading KuCoin data...';
+
+      try {
+        const data = await fetchWithAuth(
+        '/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=1&verbose=false&timeout=30'
+        );
+
+    let trades =
+      data?.response?.data?.data?.trades ||
+      data?.response?.data?.trades ||
+      data?.data?.trades ||
+      data.trades ||
+      [];
+
+    // sort by trade_timestamp DESC (newest first)
+    trades = trades.slice().sort((a, b) => {
+      const ta = a.trade_timestamp || a.timestamp || 0;
+      const tb = b.trade_timestamp || b.timestamp || 0;
+      return tb - ta; // descending
+    });
+
+    renderTradesTable('kucoin-content', trades);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading KuCoin data: ${error.message}</div>`;
+  }
+}
+
+
+    // -------- Gate.io data (placeholder endpoint) --------
+    async function loadGateioData() {
+      const el = document.getElementById('gateio-content');
+      el.classList.remove('error');
+      el.classList.add('loading');
+      el.textContent = 'Loading Gate.io data...';
+
+      try {
+        // TODO: replace with your real Gate.io history endpoint
+        // Example placeholder:
+        // const data = await fetchWithAuth('/bot-orchestration/<gateio-bot-id>/history?days=1&verbose=false&timeout=30');
+        const data = await fetchWithAuth('/bot-orchestration/GATEIO_BOT_ID/history?days=1&verbose=false&timeout=30');
+
+        const trades =
+          data?.response?.data?.data?.trades ||
+          data?.response?.data?.trades ||
+          data?.data?.trades ||
+          data.trades ||
+          [];
+
+        renderTradesTable('gateio-content', trades);
+      } catch (error) {
+        el.classList.remove('loading');
+        el.innerHTML = `<div class="error">Error loading Gate.io data: ${error.message}</div>`;
+      }
+    }
+
+    // -------- Initial load --------
+    refreshAll();
+    setInterval(refreshAll, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
+
