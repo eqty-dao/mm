@@ -244,24 +244,30 @@
 
     <!-- DOCKER TAB -->
     <section id="tab-docker" class="tab-content active">
-      <div class="card">
-        <div class="refresh-info">
-          Auto-refreshing every 120 seconds
-        </div>
-      </div>
+  <div class="card">
+    <div class="refresh-info">
+      Auto-refreshing every 120 seconds
+    </div>
+  </div>
 
-      <div class="card">
-        <h2>Docker Service Status</h2>
-        <div id="docker-info" class="loading">Loading...</div>
-      </div>
+  <div class="card">
+    <h2>Docker Service Status</h2>
+    <div id="docker-info" class="loading">Loading...</div>
+  </div>
 
-      <div class="card">
-        <h2>Active Containers</h2>
-        <div id="containers-info" class="loading">Loading...</div>
-      </div>
+  <!-- NEW MQTT STATUS CARD -->
+  <div class="card">
+    <h2>MQTT Status</h2>
+    <div id="mqtt-info" class="loading">Loading...</div>
+  </div>
 
-      <div class="last-update" id="last-update"></div>
-    </section>
+  <div class="card">
+    <h2>Active Containers</h2>
+    <div id="containers-info" class="loading">Loading...</div>
+  </div>
+
+  <div class="last-update" id="last-update"></div>
+</section>
 
     <!-- KUCOIN TAB -->
     <section id="tab-kucoin" class="tab-content">
@@ -365,6 +371,62 @@
           `<div class="error">Error: ${error.message}</div>`;
       }
     }
+async function fetchMQTTStatus() {
+  try {
+    const data = await fetchWithAuth('/bot-orchestration/mqtt');
+    const mqttDiv = document.getElementById('mqtt-info');
+
+    // Extract data
+    const mqttData = data?.data || data;
+    const connected = mqttData.mqtt_connected === true || mqttData.client_state === 'connected';
+    const activeBots = mqttData.active_bots || [];
+    const discoveredBots = mqttData.discovered_bots || [];
+    const brokerHost = mqttData.broker_host || '-';
+    const brokerPort = mqttData.broker_port || '-';
+
+    const statusBadge = connected
+      ? '<span class="status-badge status-running">✓ Connected</span>'
+      : '<span class="status-badge status-stopped">✗ Disconnected</span>';
+
+    mqttDiv.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <strong>Connection Status:</strong> ${statusBadge}
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+        <div>
+          <strong>Broker:</strong> ${brokerHost}:${brokerPort}
+        </div>
+        <div>
+          <strong>Active Bots:</strong> ${activeBots.length}
+        </div>
+        <div>
+          <strong>Discovered Bots:</strong> ${discoveredBots.length}
+        </div>
+      </div>
+      ${activeBots.length > 0 ? `
+        <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; margin-top: 10px;">
+          <strong style="color: #15803d;">Active Bots:</strong>
+          <div style="margin-top: 5px; color: #166534; font-size: 13px; font-family: monospace;">
+            ${activeBots.map(bot => `<div>• ${bot}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+      ${discoveredBots.length > 0 ? `
+        <div style="background: #eff6ff; padding: 10px; border-radius: 6px; margin-top: 10px;">
+          <strong style="color: #1e40af;">Discovered Bots:</strong>
+          <div style="margin-top: 5px; color: #1e3a8a; font-size: 13px; font-family: monospace;">
+            ${discoveredBots.map(bot => `<div>• ${bot}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+  } catch (error) {
+    document.getElementById('mqtt-info').innerHTML =
+      `<div class="error">Error: ${error.message}</div>`;
+  }
+}
+
 
     function updateTimestamp() {
       const now = new Date();
@@ -375,7 +437,8 @@
     async function refreshAll() {
       await Promise.all([
         checkDockerStatus(),
-        fetchActiveContainers()
+        fetchActiveContainers(),
+	fetchMQTTStatus()         // NEW
       ]);
       updateTimestamp();
     }
