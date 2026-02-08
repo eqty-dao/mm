@@ -443,25 +443,31 @@
       el.textContent = 'Loading KuCoin data...';
 
       try {
-        // Proxy to:
-        // /bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=1&verbose=false&timeout=30
         const data = await fetchWithAuth(
-          '/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=1&verbose=false&timeout=30'
+        '/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=1&verbose=false&timeout=30'
         );
 
-        const trades =
-          data?.response?.data?.data?.trades ||
-          data?.response?.data?.trades ||
-          data?.data?.trades ||
-          data.trades ||
-          [];
+    let trades =
+      data?.response?.data?.data?.trades ||
+      data?.response?.data?.trades ||
+      data?.data?.trades ||
+      data.trades ||
+      [];
 
-        renderTradesTable('kucoin-content', trades);
-      } catch (error) {
-        el.classList.remove('loading');
-        el.innerHTML = `<div class="error">Error loading KuCoin data: ${error.message}</div>`;
-      }
-    }
+    // sort by trade_timestamp DESC (newest first)
+    trades = trades.slice().sort((a, b) => {
+      const ta = a.trade_timestamp || a.timestamp || 0;
+      const tb = b.trade_timestamp || b.timestamp || 0;
+      return tb - ta; // descending
+    });
+
+    renderTradesTable('kucoin-content', trades);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading KuCoin data: ${error.message}</div>`;
+  }
+}
+
 
     // -------- Gate.io data (placeholder endpoint) --------
     async function loadGateioData() {
