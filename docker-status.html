@@ -203,29 +203,28 @@
         const API_BASE = CONFIG.apiUrl;
         const REFRESH_INTERVAL = CONFIG.refreshInterval || 10000;
 
-        async function fetchWithAuth(url) {
-            const headers = {
-                'Accept': 'application/json'
-            };
-
-            // Add authentication if provided
-            if (CONFIG.username && CONFIG.password) {
-                const auth = btoa(`${CONFIG.username}:${CONFIG.password}`);
-                headers['Authorization'] = `Basic ${auth}`;
+        async function fetchWithAuth(endpoint) {
+	    // Build URL with endpoint as query parameter
+    	    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+    
+    	    const response = await fetch(url, {
+            	headers: {
+            		'Accept': 'application/json'
+        	}
+	    });
+    
+    	    if (!response.ok) {
+            	throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+    
+    	    return await response.json();
+	}	
 
-            const response = await fetch(url, { headers });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
-        }
+	
 
         async function checkDockerStatus() {
             try {
-                const data = await fetchWithAuth(`${API_BASE}/docker/running`);
+                const data = await fetchWithAuth('/docker/running');
                 const statusBadge = document.getElementById('docker-status');
                 const dockerInfo = document.getElementById('docker-info');
 
@@ -247,7 +246,7 @@
 
         async function fetchActiveContainers() {
             try {
-                const data = await fetchWithAuth(`${API_BASE}/docker/active-containers`);
+                const data = await fetchWithAuth('/docker/active-containers');
                 const containersDiv = document.getElementById('containers-info');
 
                 if (Array.isArray(data) && data.length > 0) {
