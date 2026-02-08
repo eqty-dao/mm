@@ -453,17 +453,19 @@ async function fetchMQTTStatus() {
     sec.classList.toggle('active', sec.id === `tab-${tabName}`);
   });
 
-  // Load data every time tab is clicked
-  if (tabName === 'kucoin') {
+// Change page title based on active tab
+  if (tabName === 'docker') {
+    document.title = '🐳 Docker & Hummingbot Monitor';
+  } else if (tabName === 'kucoin') {
+    document.title = '💹 KuCoin - Hummingbot Monitor';
     loadKucoinBalance();
     loadKucoinData();
-  }
-  if (tabName === 'gateio') {
+  } else if (tabName === 'gateio') {
+    document.title = '💹 Gate.io - Hummingbot Monitor';
     loadGateioBalance();
     loadGateioData();
   }
 }
-
 
     // -------- Helper: render trades table --------
     function renderTradesTable(containerId, trades) {
