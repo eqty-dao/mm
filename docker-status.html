@@ -280,10 +280,16 @@
     <!-- GATE.IO TAB -->
     <section id="tab-gateio" class="tab-content">
       <div class="card">
+        <h2>Gate.io Balance</h2>
+        <div id="gateio-balance" class="loading">Loading Gate.io balance...</div>
+      </div>
+
+      <div class="card">
         <h2>Gate.io Stats & Trades</h2>
         <div id="gateio-content" class="loading">Loading Gate.io data...</div>
       </div>
-    </section>
+  </section>
+
   </div>
 
   <script>
@@ -375,7 +381,7 @@
     }
 
     // -------- Tabs --------
-    function showTab(tabName) {
+function showTab(tabName) {
   document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
@@ -385,11 +391,12 @@
   });
 
   if (tabName === 'kucoin' && !window._kucoinLoaded) {
-    loadKucoinBalance();   // NEW
+    loadKucoinBalance();
     loadKucoinData();
     window._kucoinLoaded = true;
   }
   if (tabName === 'gateio' && !window._gateioLoaded) {
+    loadGateioBalance();   // NEW
     loadGateioData();
     window._gateioLoaded = true;
   }
@@ -527,6 +534,50 @@ async function loadKucoinBalance() {
   }
 }
 
+async function loadGateioBalance() {
+  const el = document.getElementById('gateio-balance');
+  el.classList.remove('error');
+  el.classList.add('loading');
+  el.textContent = 'Loading Gate.io balance...';
+
+  try {
+    const endpoint = '/portfolio/state';
+    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+
+    const body = {
+      account_names: ['cex_mm_gate'],  // TODO: Replace with your actual Gate.io account name
+      connector_names: ['gate_io'],
+      skip_gateway: false,
+      refresh: true
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Expecting: { "cex_mm_gateio": { "gate_io": [ {token, units, ...}, ... ] } }
+    const balances =
+      data?.cex_mm_gate?.gate_io ||
+      [];
+
+    renderBalanceTable('gateio-balance', balances);
+  } catch (error) {
+    el.classList.remove('loading');
+    el.innerHTML = `<div class="error">Error loading Gate.io balance: ${error.message}</div>`;
+  }
+}
 
     // -------- KuCoin data (using your history endpoint) --------
     async function loadKucoinData() {
