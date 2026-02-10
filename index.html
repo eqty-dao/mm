@@ -646,8 +646,8 @@ async function loadGateioBalance() {
     const data = await response.json();
     
     // LOG THE FULL DATA (remove after checking)
-    console.log('🔍 Full Gate.io API Response:', JSON.stringify(data, null, 2));
-    console.log('🔍 Full Gate.io Data Object:', data);
+    //console.log('🔍 Full Gate.io API Response:', JSON.stringify(data, null, 2));
+    //console.log('🔍 Full Gate.io Data Object:', data);
 
     // Expecting: { "cex_mm_gate": { "gate_io": [ {token, units, ...}, ... ] } }
     const balances = data?.cex_mm_gate?.gate_io || [];
