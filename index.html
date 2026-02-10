@@ -621,9 +621,9 @@ async function loadGateioBalance() {
   try {
     const endpoint = '/portfolio/state';
     const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
-
+    
     const body = {
-      account_names: ['cex_mm_gate'],  // TODO: Replace with your actual Gate.io account name
+      account_names: ['cex_mm_gate'],
       connector_names: ['gate_io'],
       skip_gateway: false,
       refresh: true
@@ -644,11 +644,25 @@ async function loadGateioBalance() {
     }
 
     const data = await response.json();
+    
+    // LOG THE FULL DATA (remove after checking)
+    console.log('🔍 Full Gate.io API Response:', JSON.stringify(data, null, 2));
+    console.log('🔍 Full Gate.io Data Object:', data);
 
-    // Expecting: { "cex_mm_gateio": { "gate_io": [ {token, units, ...}, ... ] } }
-    const balances =
-      data?.cex_mm_gate?.gate_io ||
-      [];
+    // Expecting: { "cex_mm_gate": { "gate_io": [ {token, units, ...}, ... ] } }
+    const balances = data?.cex_mm_gate?.gate_io || [];
+    
+    // Calculate total value
+    const totalValue = balances.reduce((sum, b) => sum + (b.value || 0), 0);
+    
+    // Update header with stats
+    const balanceCard = el.closest('.card');
+    const header = balanceCard.querySelector('h2');
+    const uid = '47462332'; // Replace with your actual Gate.io UID
+    header.innerHTML = `Gate.io Balance <span style="float: right; display: flex; gap: 10px;">
+      <span style="font-size: 14px; background: #eff6ff; color: #1e40af; padding: 4px 12px; border-radius: 6px; font-weight: 500;">UID: ${uid}</span>
+      <span style="font-size: 14px; background: #f0fdf4; color: #15803d; padding: 4px 12px; border-radius: 6px; font-weight: 500;">Total: $${totalValue.toFixed(2)}</span>
+    </span>`;
 
     renderBalanceTable('gateio-balance', balances);
   } catch (error) {
