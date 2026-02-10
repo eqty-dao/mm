@@ -569,7 +569,6 @@ async function loadKucoinBalance() {
   el.textContent = 'Loading KuCoin balance...';
 
   try {
-    // POST through Vercel proxy to /portfolio/state
     const url = `${API_BASE}?endpoint=${encodeURIComponent('/portfolio/state')}`;
 
     const response = await fetch(url, {
@@ -592,14 +591,19 @@ async function loadKucoinBalance() {
 
     const data = await response.json();
 
-    // LOG THE FULL DATA
-    console.log('🔍 Full KuCoin API Response:', JSON.stringify(data, null, 2));
-    console.log('🔍 Full KuCoin Data Object:', data);
-
-    // Shape: { "cex_mm_kucoin": { "kucoin": [ {token, units, ...}, ... ] } }
-    const balances =
-      data?.cex_mm_kucoin?.kucoin ||
-      [];
+    const balances = data?.cex_mm_kucoin?.kucoin || [];
+    
+    // Calculate total value
+    const totalValue = balances.reduce((sum, b) => sum + (b.value || 0), 0);
+    
+    // Update header with stats
+    const balanceCard = el.closest('.card');
+    const header = balanceCard.querySelector('h2');
+    const uid = '253168596'; // Replace with your actual KuCoin UID
+    header.innerHTML = `KuCoin Balance <span style="float: right; display: flex; gap: 10px;">
+      <span style="font-size: 14px; background: #eff6ff; color: #1e40af; padding: 4px 12px; border-radius: 6px; font-weight: 500;">UID: ${uid}</span>
+      <span style="font-size: 14px; background: #f0fdf4; color: #15803d; padding: 4px 12px; border-radius: 6px; font-weight: 500;">Total: $${totalValue.toFixed(2)}</span>
+    </span>`;
 
     renderBalanceTable('kucoin-balance', balances);
   } catch (error) {
