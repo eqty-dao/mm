@@ -585,12 +585,16 @@ async function loadKucoinBalance() {
         refresh: true
       })
     });
-
+    
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    } 
 
     const data = await response.json();
+
+    // LOG THE FULL DATA
+    console.log('🔍 Full KuCoin API Response:', JSON.stringify(data, null, 2));
+    console.log('🔍 Full KuCoin Data Object:', data);
 
     // Shape: { "cex_mm_kucoin": { "kucoin": [ {token, units, ...}, ... ] } }
     const balances =
