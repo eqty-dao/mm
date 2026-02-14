@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MM Bot Metrics</title>
+</head>
+<body>
+<pre id="metrics">Loading...</pre>
+
+<script>
+  const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
+
+  async function fetchBotStatus(botName) {
+    const endpoint = `/bot-orchestration/${botName}/status`;
+    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  async function fetchOrderBook(connector, pair) {
+    const endpoint = '/market-data/order-book';
+    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        connector_name: connector,
+        trading_pair: pair
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  async function fetchPortfolioState(accountNames, connectorNames) {
+    const endpoint = '/portfolio/state';
+    const url = `${API_BASE}?endpoint=${encodeURIComponent(endpoint)}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        account_names: accountNames,
+        connector_names: connectorNames,
+        skip_gateway: false,
+        refresh: true
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  function parseOrdersFromLogs(logs) {
+    const orderPattern = /Created (LIMIT_MAKER|LIMIT) (BUY|SELL) order (\S+) for ([\d.]+) EQTY-USDT at ([\d.]+)/;
+    const uniqueOrders = new Map();
+
+    for (let i = logs.length - 1; i >= 0; i--) {
+      const log = logs[i];
+      const msg = log.msg || '';
+      const match = msg.match(orderPattern);
+
+      if (match) {
+        const [, orderType, side, orderId, amount, price] = match;
+        const priceLevel = parseFloat(price).toFixed(6);
+        const key = `${side}_${priceLevel}`;
+
+        if (!uniqueOrders.has(key)) {
+          uniqueOrders.set(key, {
+            orderType, side, orderId,
+            amount: parseFloat(amount),
+            price: parseFloat(price),
+            timestamp: log.timestamp
+          });
+        }
+      }
+    }
+
+    return Array.from(uniqueOrders.values());
+  }
+
+  function calculateAssetMetrics(balances, midPrice) {
+    const eqtyBalance = balances.find(b => b.token === 'EQTY') || {};
+    const usdtBalance = balances.find(b => b.token === 'USDT') || {};
+
+    const eqtyTotal = parseFloat(eqtyBalance.units) || 0;
+    const eqtyAvailable = parseFloat(eqtyBalance.available_units) || 0;
+    const usdtTotal = parseFloat(usdtBalance.units) || 0;
+    const usdtAvailable = parseFloat(usdtBalance.available_units) || 0;
+
+    const eqtyValueUSDT = eqtyTotal * midPrice;
+    const usdtValueUSDT = usdtTotal;
+    const totalValueUSDT = eqtyValueUSDT + usdtValueUSDT;
+
+    const eqtyCurrentPct = (eqtyValueUSDT / totalValueUSDT) * 100;
+    const usdtCurrentPct = (usdtValueUSDT / totalValueUSDT) * 100;
+
+    const targetPct = 50.0;
+    const targetValueUSDT = totalValueUSDT / 2;
+
+    const eqtyOrderAdjust = (targetValueUSDT / eqtyValueUSDT) * 100;
+    const usdtOrderAdjust = (targetValueUSDT / usdtValueUSDT) * 100;
+
+    const inventoryMin = 31.0;
+    const inventoryMax = 69.0;
+
+    return {
+      eqty_current_pct: eqtyCurrentPct,
+      usdt_current_pct: usdtCurrentPct,
+      eqty_order_adjust: eqtyOrderAdjust,
+      usdt_order_adjust: usdtOrderAdjust,
+      is_balanced: (eqtyCurrentPct >= inventoryMin && eqtyCurrentPct <= inventoryMax) ? 1 : 0,
+      total_value_usdt: totalValueUSDT,
+      eqty_total: eqtyTotal,
+      eqty_available: eqtyAvailable,
+      usdt_total: usdtTotal,
+      usdt_available: usdtAvailable
+    };
+  }
+
+  async function getMetrics(botId, exchange, accountName, connector) {
+    try {
+      const [statusData, orderBookData, portfolioData] = await Promise.all([
+        fetchBotStatus(botId),
+        fetchOrderBook(connector, 'EQTY-USDT'),
+        fetchPortfolioState([accountName], [connector])
+      ]);
+
+      const logs = statusData?.data?.general_logs || [];
+      const orders = parseOrdersFromLogs(logs);
+
+      const bestBid = orderBookData?.bids?.[0]?.price || 0;
+      const bestAsk = orderBookData?.asks?.[0]?.price || 0;
+      const midPrice = (parseFloat(bestBid) + parseFloat(bestAsk)) / 2;
+
+      let balances = [];
+      if (exchange === 'kucoin') {
+        balances = portfolioData?.cex_mm_kucoin?.kucoin || [];
+      } else if (exchange === 'gateio') {
+        balances = portfolioData?.cex_mm_gate?.gate_io || [];
+      }
+
+      const assets = calculateAssetMetrics(balances, midPrice);
+
+      const buyOrders = orders.filter(o => o.side === 'BUY').length;
+      const sellOrders = orders.filter(o => o.side === 'SELL').length;
+
+      return {
+        ...assets,
+        mid_price: midPrice,
+        best_bid: bestBid,
+        best_ask: bestAsk,
+        active_orders_count: buyOrders + sellOrders,
+        buy_orders_count: buyOrders,
+        sell_orders_count: sellOrders,
+        bot_status: statusData?.data?.status || 'unknown',
+        recently_active: statusData?.data?.recently_active ? 1 : 0
+      };
+    } catch (error) {
+      return {
+        error: error.message,
+        eqty_current_pct: 0,
+        usdt_current_pct: 0,
+        is_balanced: 0,
+        total_value_usdt: 0,
+        active_orders_count: 0
+      };
+    }
+  }
+
+  async function fetchAllMetrics() {
+    const [kucoin, gateio] = await Promise.all([
+      getMetrics(
+        'ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0',
+        'kucoin',
+        'cex_mm_kucoin',
+        'kucoin'
+      ),
+      getMetrics(
+        'da6132e324292f6f7b914b58333808506f741db0',
+        'gateio',
+        'cex_mm_gate',
+        'gate_io'
+      )
+    ]);
+
+    const metrics = {
+      timestamp: Math.floor(Date.now() / 1000),
+      kucoin: kucoin,
+      gateio: gateio
+    };
+
+    document.getElementById('metrics').textContent = JSON.stringify(metrics, null, 2);
+  }
+
+  // Fetch immediately
+  fetchAllMetrics();
+</script>
+</body>
+</html>
+
