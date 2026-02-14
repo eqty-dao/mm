@@ -3,8 +3,8 @@
 Static dashboard hosted on GitHub Pages that shows:
 
 - Docker status and active containers
-- Hummingbot trades for KuCoin (via bot history endpoint)
-- Placeholder tab for Gate.io (ready to be wired to its bot)
+- Balances for KuCoin and Gate.io
+- Hummingbot trades for KuCoin and Gate.io (via bot history endpoint)
 
 All sensitive credentials are handled **server-side** via a Vercel serverless proxy; the GitHub Pages site never sees or stores secrets.
 
@@ -12,7 +12,7 @@ All sensitive credentials are handled **server-side** via a Vercel serverless pr
 
 ## Architecture Overview
 
-- **Frontend**: `docker-status.html` served by GitHub Pages from this repo.
+- **Frontend**: `eqty.html` served by GitHub Pages from this repo.
 - **Proxy**: Vercel serverless function (`docker-proxy` project) that:
   - Receives requests from the frontend
   - Adds Docker/Hummingbot API credentials on the server side
@@ -192,7 +192,7 @@ This is your API_BASE used by the frontend.
 
 2. Frontend (this repo)
 2.1 Docker & Hummingbot dashboard
-The main page is docker-status.html. It:
+The main page is eqty.html (index.html is a copy). It:
 
 Defines the proxy base:
 
@@ -258,4 +258,4 @@ Repo → Settings → Pages
 Source: gh-pages branch, root folder
 
 Resulting URL:
-https://<your-username>.github.io/money_maker/eqty.html
+https://username.github.io/mm/eqty.html or simply https://username.github.io/mm/ (because of index.html)
