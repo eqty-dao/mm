@@ -1,8 +1,20 @@
 // api/docker.js
 export default async function handler(req, res) {
-  const allowedOrigin = 'https://zolpho.github.io';
+  // Support both origins during transition
+  const allowedOrigins = [
+    'https://zolpho.github.io',
+    'https://eqty-dao.github.io'
+  ];
 
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  // Check if request origin is allowed
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // Default to first origin if no match (fallback)
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
