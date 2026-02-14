@@ -637,31 +637,35 @@ async function fetchMQTTStatus() {
     }
 
     function parseOrdersFromLogs(logs) {
-      const orderPattern = /Created (LIMIT_MAKER|LIMIT) (BUY|SELL) order (\S+) for ([\d.]+) EQTY-USDT at ([\d.]+)/;
-      const uniqueOrders = new Map();
+  const orderPattern = /Created (LIMIT_MAKER|LIMIT) (BUY|SELL) order (\S+) for ([\d.]+) EQTY-USDT at ([\d.]+)/;
+  const uniqueOrders = new Map();
 
-      for (let i = logs.length - 1; i >= 0; i--) {
-        const log = logs[i];
-        const msg = log.msg || '';
-        const match = msg.match(orderPattern);
-
-        if (match) {
-          const [, orderType, side, orderId, amount, price] = match;
-          if (!uniqueOrders.has(orderId)) {
-            uniqueOrders.set(orderId, {
-              orderType,
-              side,
-              orderId,
-              amount: parseFloat(amount),
-              price: parseFloat(price),
-              timestamp: log.timestamp
-            });
-          }
-        }
+  for (let i = logs.length - 1; i >= 0; i--) {
+    const log = logs[i];
+    const msg = log.msg || '';
+    const match = msg.match(orderPattern);
+    
+    if (match) {
+      const [, orderType, side, orderId, amount, price] = match;
+      const priceLevel = parseFloat(price).toFixed(6); // Use price as unique key
+      const key = `${side}_${priceLevel}`; // Unique key per side+price
+      
+      if (!uniqueOrders.has(key)) {
+        uniqueOrders.set(key, {
+          orderType,
+          side,
+          orderId,
+          amount: parseFloat(amount),
+          price: parseFloat(price),
+          timestamp: log.timestamp
+        });
       }
-
-      return Array.from(uniqueOrders.values());
     }
+  }
+
+  return Array.from(uniqueOrders.values());
+}
+      
 
     function calculateAssetMetrics(balances, midPrice) {
       const eqtyBalance = balances.find(b => b.token === 'EQTY') || {};
