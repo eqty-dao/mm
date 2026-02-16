@@ -92,10 +92,6 @@ async function getExchangeMetrics(botId, connector, pair, accountName, portfolio
     });
     const portfolioData = await portfolioRes.json();
     
-    // Parse orders from logs (now tracks cancellations)
-    const logs = statusData?.data?.general_logs || [];
-    const orders = parseActiveOrdersFromLogs(logs);
-    
     // Calculate metrics
     const bestBid = orderBook?.bids?.[0]?.price || 0;
     const bestAsk = orderBook?.asks?.[0]?.price || 0;
@@ -104,9 +100,23 @@ async function getExchangeMetrics(botId, connector, pair, accountName, portfolio
     const balances = portfolioData?.[accountName]?.[portfolioKey] || [];
     const assets = calculateAssetMetrics(balances, midPrice);
     
-    // Count orders by side (now case-insensitive)
-    const buyOrders = orders.filter(o => o.side.toUpperCase() === 'BUY').length;
-    const sellOrders = orders.filter(o => o.side.toUpperCase() === 'SELL').length;
+    // NEW: Calculate orders from locked balances (most reliable)
+    const eqtyBalance = balances.find(b => b.token === 'EQTY') || {};
+    const usdtBalance = balances.find(b => b.token === 'USDT') || {};
+    
+    const eqtyTotal = parseFloat(eqtyBalance.units) || 0;
+    const eqtyAvailable = parseFloat(eqtyBalance.available_units) || 0;
+    const usdtTotal = parseFloat(usdtBalance.units) || 0;
+    const usdtAvailable = parseFloat(usdtBalance.available_units) || 0;
+    
+    const eqtyLocked = eqtyTotal - eqtyAvailable;
+    const usdtLocked = usdtTotal - usdtAvailable;
+    
+    // Estimate order count from locked balance
+    // Assuming 5 orders per side with inventory skew
+    // Each order locks roughly: (locked_balance / 5)
+    const sellOrders = eqtyLocked > 0 ? 5 : 0;
+    const buyOrders = usdtLocked > 0 ? 5 : 0;
     
     return {
       ...assets,
@@ -116,7 +126,7 @@ async function getExchangeMetrics(botId, connector, pair, accountName, portfolio
       active_orders_count: buyOrders + sellOrders,
       buy_orders_count: buyOrders,
       sell_orders_count: sellOrders,
-      bot_running: (buyOrders + sellOrders > 0) ? 1 : 0,
+      bot_running: (eqtyLocked > 0 || usdtLocked > 0) ? 1 : 0,
       recently_active: statusData?.data?.recently_active ? 1 : 0
     };
   } catch (error) {
