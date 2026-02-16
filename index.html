@@ -161,7 +161,7 @@
     /* Tabs */
     .tabs {
       display: flex;
-      gap: 10px;
+      gap: 20px;
       margin-top: 10px;
       margin-bottom: 5px;
     }
@@ -599,6 +599,15 @@ async function fetchMQTTStatus() {
           fetchOrderBook('kucoin', 'EQTY-USDT'),
           fetchPortfolioState(['cex_mm_kucoin'], ['kucoin'])
         ]);
+     
+     // Update bot status indicator
+     const botIndicator = document.getElementById('kucoin-bot-status');
+     if (botIndicator && statusData?.data?.running !== undefined) {
+       const isRunning = statusData.data.running === true;
+       botIndicator.innerHTML = isRunning 
+         ? '<span style="color: #4CAF50; font-weight: 600;">✓ Running</span>'
+         : '<span style="color: #f44336; font-weight: 600;">✗ Stopped</span>';
+     }
 
         renderBotStatus(container, statusData, orderBookData, portfolioData, 'kucoin', botId);
       } catch (error) {
@@ -620,6 +629,16 @@ async function fetchMQTTStatus() {
           fetchOrderBook('gate_io', 'EQTY-USDT'),
           fetchPortfolioState(['cex_mm_gate'], ['gate_io'])
         ]);
+
+        // Update bot status indicator
+        const botIndicator = document.getElementById('gateio-bot-status');
+        if (botIndicator && statusData?.data?.running !== undefined) {
+          const isRunning = statusData.data.running === true;
+          botIndicator.innerHTML = isRunning 
+            ? '<span style="color: #4CAF50; font-weight: 600;">✓ Running</span>'
+            : '<span style="color: #f44336; font-weight: 600;">✗ Stopped</span>';
+        }
+        
 
         renderBotStatus(container, statusData, orderBookData, portfolioData, 'gate_io', botId);
       } catch (error) {
