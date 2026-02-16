@@ -161,7 +161,7 @@
     /* Tabs */
     .tabs {
       display: flex;
-      gap: 20px;
+      gap: 40px;
       margin-top: 10px;
       margin-bottom: 5px;
     }
@@ -585,66 +585,67 @@ async function fetchMQTTStatus() {
 
     // ==================== BOT STATUS FUNCTIONS ====================
 
-    // KuCoin Bot Status
-    async function loadKucoinBotStatus() {
-      const container = document.getElementById('kucoin-bot-status');
-      if (!container) return;
+// KuCoin Bot Status
+async function loadKucoinBotStatus() {
+  const container = document.getElementById('kucoin-bot-status');
+  if (!container) return;
 
-      container.innerHTML = '<div class="loading">Loading bot status...</div>';
+  container.innerHTML = '<div class="loading">Loading bot status...</div>';
 
-      try {
-        const botId = 'ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0';
-        const [statusData, orderBookData, portfolioData] = await Promise.all([
-          fetchBotStatus(botId),
-          fetchOrderBook('kucoin', 'EQTY-USDT'),
-          fetchPortfolioState(['cex_mm_kucoin'], ['kucoin'])
-        ]);
-     
-     // Update bot status indicator
-     const botIndicator = document.getElementById('kucoin-bot-status');
-     if (botIndicator && statusData?.data?.running !== undefined) {
-       const isRunning = statusData.data.running === true;
-       botIndicator.innerHTML = isRunning 
-         ? '<span style="color: #4CAF50; font-weight: 600;">✓ Running</span>'
-         : '<span style="color: #f44336; font-weight: 600;">✗ Stopped</span>';
-     }
+  try {
+    const botId = 'ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0';
+    const [statusData, orderBookData, portfolioData] = await Promise.all([
+      fetchBotStatus(botId),
+      fetchOrderBook('kucoin', 'EQTY-USDT'),
+      fetchPortfolioState(['cex_mm_kucoin'], ['kucoin'])
+    ]);
+    
+    // Render the full bot status first
+    renderBotStatus(container, statusData, orderBookData, portfolioData, 'kucoin', botId);
+    
+    // Then prepend the running status at the top
+    const isRunning = statusData?.data?.running === true;
+    const statusBadge = isRunning
+      ? '<div style="padding: 10px; margin-bottom: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;"><span style="color: #15803d; font-weight: 600; font-size: 16px;">✓ Bot Running</span></div>'
+      : '<div style="padding: 10px; margin-bottom: 15px; background: #fef2f2; border-radius: 8px; border: 1px solid #fca5a5;"><span style="color: #dc2626; font-weight: 600; font-size: 16px;">✗ Bot Stopped</span></div>';
+    
+    container.insertAdjacentHTML('afterbegin', statusBadge);
+    
+  } catch (error) {
+    container.innerHTML = `<div class="error">Error loading bot status: ${error.message}</div>`;
+  } 
+}
 
-        renderBotStatus(container, statusData, orderBookData, portfolioData, 'kucoin', botId);
-      } catch (error) {
-        container.innerHTML = `<div class="error">Error loading bot status: ${error.message}</div>`;
-      }
-    }
+// Gate.io Bot Status
+async function loadGateioBotStatus() {
+  const container = document.getElementById('gateio-bot-status');
+  if (!container) return;
+    
+  container.innerHTML = '<div class="loading">Loading bot status...</div>';
+    
+  try {
+    const botId = 'da6132e324292f6f7b914b58333808506f741db0';
+    const [statusData, orderBookData, portfolioData] = await Promise.all([
+      fetchBotStatus(botId),
+      fetchOrderBook('gate_io', 'EQTY-USDT'),
+      fetchPortfolioState(['cex_mm_gate'], ['gate_io'])
+    ]);
+    
+    // Render the full bot status first
+    renderBotStatus(container, statusData, orderBookData, portfolioData, 'gate_io', botId);
+    
+    // Then prepend the running status at the top
+    const isRunning = statusData?.data?.running === true;
+    const statusBadge = isRunning
+      ? '<div style="padding: 10px; margin-bottom: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;"><span style="color: #15803d; font-weight: 600; font-size: 16px;">✓ Bot Running</span></div>'
+      : '<div style="padding: 10px; margin-bottom: 15px; background: #fef2f2; border-radius: 8px; border: 1px solid #fca5a5;"><span style="color: #dc2626; font-weight: 600; font-size: 16px;">✗ Bot Stopped</span></div>';
+    
+    container.insertAdjacentHTML('afterbegin', statusBadge);
 
-    // Gate.io Bot Status
-    async function loadGateioBotStatus() {
-      const container = document.getElementById('gateio-bot-status');
-      if (!container) return;
-
-      container.innerHTML = '<div class="loading">Loading bot status...</div>';
-
-      try {
-        const botId = 'da6132e324292f6f7b914b58333808506f741db0';
-        const [statusData, orderBookData, portfolioData] = await Promise.all([
-          fetchBotStatus(botId),
-          fetchOrderBook('gate_io', 'EQTY-USDT'),
-          fetchPortfolioState(['cex_mm_gate'], ['gate_io'])
-        ]);
-
-        // Update bot status indicator
-        const botIndicator = document.getElementById('gateio-bot-status');
-        if (botIndicator && statusData?.data?.running !== undefined) {
-          const isRunning = statusData.data.running === true;
-          botIndicator.innerHTML = isRunning 
-            ? '<span style="color: #4CAF50; font-weight: 600;">✓ Running</span>'
-            : '<span style="color: #f44336; font-weight: 600;">✗ Stopped</span>';
-        }
-        
-
-        renderBotStatus(container, statusData, orderBookData, portfolioData, 'gate_io', botId);
-      } catch (error) {
-        container.innerHTML = `<div class="error">Error loading bot status: ${error.message}</div>`;
-      }
-    }
+  } catch (error) {
+    container.innerHTML = `<div class="error">Error loading bot status: ${error.message}</div>`;
+  }
+}
 
     async function fetchBotStatus(botName) {
       const endpoint = `/bot-orchestration/${botName}/status`;
