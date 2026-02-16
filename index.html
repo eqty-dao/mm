@@ -482,34 +482,25 @@ async function fetchMQTTStatus() {
     
   } else if (tabName === 'kucoin') {
     pageTitle.textContent = '💹 KuCoin - EQTY MM stats';
-    // Update header status for KuCoin bot
-    if (window.kucoinBotRunning !== undefined) {
-      statusDiv.innerHTML = window.kucoinBotRunning
-        ? '<span class="status-badge status-running">✓ Running</span>'
-        : '<span class="status-badge status-stopped">✗ Stopped</span>';
-    } else {
-      statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
-    }
+    // Set checking status immediately
+    statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
+    // Fetch bot status and update
+    fetchBotRunningStatus();
     loadKucoinBalance();
     loadKucoinBotStatus();
     loadKucoinData();
     
   } else if (tabName === 'gateio') {
     pageTitle.textContent = '💹 Gate.io - EQTY MM stats';
-    // Update header status for Gate.io bot
-    if (window.gateioBotRunning !== undefined) {
-      statusDiv.innerHTML = window.gateioBotRunning
-        ? '<span class="status-badge status-running">✓ Running</span>'
-        : '<span class="status-badge status-stopped">✗ Stopped</span>';
-    } else {
-      statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
-    }
+    // Set checking status immediately
+    statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
+    // Fetch bot status and update
+    fetchBotRunningStatus();
     loadGateioBalance();
     loadGateioBotStatus();
     loadGateioData();
   }
-}
- 
+} 
     // -------- Helper: render trades table --------
     function renderTradesTable(containerId, trades) {
   const container = document.getElementById(containerId);
@@ -618,15 +609,20 @@ async function fetchBotRunningStatus() {
     window.kucoinBotRunning = data.kucoin?.bot_running === 1;
     window.gateioBotRunning = data.gateio?.bot_running === 1;
     
-    // Update header if on respective tab
+    console.log('Bot status updated:', { 
+      kucoin: window.kucoinBotRunning, 
+      gateio: window.gateioBotRunning 
+    });
+    
+    // Update header based on active tab
     const activeTab = document.querySelector('.tab.active')?.dataset.tab;
     const statusDiv = document.getElementById('docker-status');
     
-    if (activeTab === 'kucoin') {
+    if (activeTab === 'kucoin' && statusDiv) {
       statusDiv.innerHTML = window.kucoinBotRunning
         ? '<span class="status-badge status-running">✓ Running</span>'
         : '<span class="status-badge status-stopped">✗ Stopped</span>';
-    } else if (activeTab === 'gateio') {
+    } else if (activeTab === 'gateio' && statusDiv) {
       statusDiv.innerHTML = window.gateioBotRunning
         ? '<span class="status-badge status-running">✓ Running</span>'
         : '<span class="status-badge status-stopped">✗ Stopped</span>';
@@ -634,6 +630,10 @@ async function fetchBotRunningStatus() {
     
   } catch (error) {
     console.error('Error fetching bot status:', error);
+    const statusDiv = document.getElementById('docker-status');
+    if (statusDiv) {
+      statusDiv.innerHTML = '<span class="status-badge status-unknown">⚠ Error</span>';
+    }
   }
 }
 
@@ -1168,6 +1168,8 @@ async function loadGateioBalance() {
     // -------- Initial load --------
     refreshAll();
     setInterval(refreshAll, REFRESH_INTERVAL);
+    // Load bot status on page load
+    fetchBotRunningStatus();
   </script>
 </body>
 </html>
