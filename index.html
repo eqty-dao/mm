@@ -1197,9 +1197,9 @@ async function loadGateioBalance() {
       let totalFees = 0;
 
       for (const t of trades) {
-        const price   = parseFloat(t.price) || 0;
-        const qty     = parseFloat(String(t.quantity ?? '').replace(/\.$/, '')) || 0;
-        const feeRate = parseFloat(t.raw_json?.trade_fee?.percent ?? '0.003');
+        const price    = parseFloat(t.price) || 0;
+        const qty      = parseFloat(String(t.quantity ?? '').replace(/\.$/, '')) || 0;
+        const feeRate  = parseFloat(t.raw_json?.trade_fee?.percent ?? '0.003');
         const notional = price * qty;
         totalFees += notional * feeRate;
 
@@ -1210,44 +1210,52 @@ async function loadGateioBalance() {
         }
       }
 
-      const tradePnl      = sellVolume - buyVolume;
-      const netPnl        = tradePnl - totalFees;
-      const totalVolume   = buyVolume + sellVolume;
-      const avgBuyPrice   = buyQty  > 0 ? buyVolume  / buyQty  : 0;
-      const avgSellPrice  = sellQty > 0 ? sellVolume / sellQty : 0;
-      const netEqtyChange = buyQty  - sellQty;
+      const tradePnl       = sellVolume - buyVolume;
+      const netPnl         = tradePnl - totalFees;
+      const totalVolume    = buyVolume + sellVolume;
+      const totalEqtyVol   = buyQty + sellQty;             // NEW: total EQTY moved
+      const avgBuyPrice    = buyQty  > 0 ? buyVolume  / buyQty  : 0;
+      const avgSellPrice   = sellQty > 0 ? sellVolume / sellQty : 0;
+      const netEqtyChange  = buyQty  - sellQty;
 
       return {
         buyVolume, buyQty, buyCount,
         sellVolume, sellQty, sellCount,
         totalFees, tradePnl, netPnl,
-        totalVolume, avgBuyPrice, avgSellPrice,
+        totalVolume, totalEqtyVol,
+        avgBuyPrice, avgSellPrice,
         netEqtyChange, tradeCount: trades.length
       };
     }
 
-    function renderPnlStats(containerId, stats, totalPortfolioValue) {
+    // midPrice: pass window.eqtyBotMetrics?.mid_price or window.gateioMetrics?.mid_price
+    function renderPnlStats(containerId, stats, totalPortfolioValue, midPrice) {
       const el = document.getElementById(containerId);
       if (!el) return;
 
       const returnPct = totalPortfolioValue > 0 ? (stats.netPnl / totalPortfolioValue) * 100 : null;
 
+      // True P&L = net USDT cash flow + mark-to-market value of accumulated EQTY
+      const truePnl     = midPrice > 0 ? stats.netPnl + (stats.netEqtyChange * midPrice) : null;
+      const trueRetPct  = (truePnl !== null && totalPortfolioValue > 0)
+        ? (truePnl / totalPortfolioValue) * 100 : null;
+
       const fmt = (n, d = 4) => {
-        if (n === undefined || n === null) return '—';
+        if (n === null || n === undefined) return '—';
         const s = Math.abs(n).toFixed(d);
         return n >= 0 ? `+$${s}` : `-$${s}`;
       };
+      const fmtPct = (n) => {
+        if (n === null || n === undefined) return '—';
+        return `${n >= 0 ? '+' : ''}${n.toFixed(3)}%`;
+      };
 
-      const pnlClass     = stats.netPnl  >= 0 ? 'positive' : 'negative';
-      const trPnlClass   = stats.tradePnl >= 0 ? 'positive' : 'negative';
-      const retClass     = returnPct === null ? 'neutral' : (returnPct >= 0 ? 'positive' : 'negative');
-      const invClass     = stats.netEqtyChange > 0 ? 'positive' : stats.netEqtyChange < 0 ? 'negative' : 'neutral';
-      const retLabel     = returnPct !== null
-        ? `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(3)}%`
-        : '—';
-      const retSub       = totalPortfolioValue > 0
-        ? `on $${totalPortfolioValue.toFixed(0)}`
-        : 'load balance first';
+      const cls      = (n) => n === null ? 'neutral' : n >= 0 ? 'positive' : 'negative';
+      const invClass = stats.netEqtyChange > 0 ? 'positive' : stats.netEqtyChange < 0 ? 'negative' : 'neutral';
+      const retSub   = totalPortfolioValue > 0 ? `on $${totalPortfolioValue.toFixed(0)}` : 'load balance first';
+      const trueSub  = midPrice > 0
+        ? `cash + ${stats.netEqtyChange > 0 ? '+' : ''}${stats.netEqtyChange.toFixed(0)} EQTY @ ${midPrice.toFixed(6)}`
+        : 'load bot status first';
 
       el.innerHTML = `
         <div class="pnl-grid">
@@ -1262,16 +1270,21 @@ async function loadGateioBalance() {
             <div class="sub">notional USDT</div>
           </div>
           <div class="pnl-stat neutral">
+            <div class="label">EQTY Vol</div>
+            <div class="value">${Math.round(stats.totalEqtyVol).toLocaleString()}</div>
+            <div class="sub">tokens moved</div>
+          </div>
+          <div class="pnl-stat neutral">
             <div class="label">Avg Buy</div>
             <div class="value">${stats.avgBuyPrice > 0 ? stats.avgBuyPrice.toFixed(6) : '—'}</div>
-            <div class="sub">${stats.buyQty.toFixed(0)} EQTY</div>
+            <div class="sub">${Math.round(stats.buyQty).toLocaleString()} EQTY</div>
           </div>
           <div class="pnl-stat neutral">
             <div class="label">Avg Sell</div>
             <div class="value">${stats.avgSellPrice > 0 ? stats.avgSellPrice.toFixed(6) : '—'}</div>
-            <div class="sub">${stats.sellQty.toFixed(0)} EQTY</div>
+            <div class="sub">${Math.round(stats.sellQty).toLocaleString()} EQTY</div>
           </div>
-          <div class="pnl-stat ${trPnlClass}">
+          <div class="pnl-stat ${cls(stats.tradePnl)}">
             <div class="label">Trade P&L</div>
             <div class="value">${fmt(stats.tradePnl)}</div>
             <div class="sub">gross (pre-fee)</div>
@@ -1279,28 +1292,33 @@ async function loadGateioBalance() {
           <div class="pnl-stat negative">
             <div class="label">Fees Paid</div>
             <div class="value">-$${stats.totalFees.toFixed(4)}</div>
-            <div class="sub">0.3% maker/taker</div>
+            <div class="sub">${(stats.totalFees / stats.totalVolume * 100).toFixed(2)}% effective</div>
           </div>
-          <div class="pnl-stat ${pnlClass} highlight">
+          <div class="pnl-stat ${cls(stats.netPnl)} highlight">
             <div class="label">Net P&L</div>
             <div class="value">${fmt(stats.netPnl)}</div>
             <div class="sub">after fees</div>
           </div>
-          <div class="pnl-stat ${retClass} highlight">
+          <div class="pnl-stat ${cls(truePnl)} highlight">
+            <div class="label">True P&L</div>
+            <div class="value">${fmt(truePnl)}</div>
+            <div class="sub" style="font-size:10px;">${trueSub}</div>
+          </div>
+          <div class="pnl-stat ${cls(returnPct)} highlight">
             <div class="label">Return %</div>
-            <div class="value">${retLabel}</div>
+            <div class="value">${fmtPct(returnPct)}</div>
             <div class="sub">${retSub}</div>
           </div>
           <div class="pnl-stat ${invClass}">
             <div class="label">Net EQTY Δ</div>
-            <div class="value">${stats.netEqtyChange > 0 ? '+' : ''}${stats.netEqtyChange.toFixed(0)}</div>
+            <div class="value">${stats.netEqtyChange > 0 ? '+' : ''}${Math.round(stats.netEqtyChange).toLocaleString()}</div>
             <div class="sub">${stats.netEqtyChange > 0 ? '↑ accumulating' : stats.netEqtyChange < 0 ? '↓ distributing' : '= neutral'}</div>
           </div>
         </div>
       `;
     }
 
-    // -------- KuCoin data (using your history endpoint) --------
+    // -------- KuCoin data --------
     async function loadKucoinData(days = 1) {
       document.querySelectorAll('#kucoin-days-selector .days-btn').forEach(btn => {
         btn.classList.toggle('active', parseInt(btn.dataset.days) === days);
@@ -1322,18 +1340,16 @@ async function loadGateioBalance() {
           data?.response?.data?.data?.trades ||
           data?.response?.data?.trades ||
           data?.data?.trades ||
-          data.trades ||
-          [];
+          data.trades || [];
 
-        trades = trades.slice().sort((a, b) => {
-          const ta = a.trade_timestamp || a.timestamp || 0;
-          const tb = b.trade_timestamp || b.timestamp || 0;
-          return tb - ta;
-        });
+        trades = trades.slice().sort((a, b) =>
+          (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
+        );
 
-        const stats = computePnlStats(trades);
+        const stats          = computePnlStats(trades);
         const portfolioValue = window.kucoinPortfolioValue || window.eqtyBotMetrics?.total_value_usdt || 0;
-        renderPnlStats('kucoin-pnl', stats, portfolioValue);
+        const midPrice       = window.eqtyBotMetrics?.mid_price || 0;
+        renderPnlStats('kucoin-pnl', stats, portfolioValue, midPrice);
 
         renderTradesTable('kucoin-content', trades);
       } catch (error) {
@@ -1342,7 +1358,6 @@ async function loadGateioBalance() {
         if (pnlEl) { pnlEl.classList.remove('loading'); pnlEl.innerHTML = `<div class="error">P&L error: ${error.message}</div>`; }
       }
     }
-
 
     // -------- Gate.io data --------
     async function loadGateioData(days = 1) {
@@ -1366,18 +1381,16 @@ async function loadGateioBalance() {
           data?.response?.data?.data?.trades ||
           data?.response?.data?.trades ||
           data?.data?.trades ||
-          data.trades ||
-          [];
+          data.trades || [];
 
-        trades = trades.slice().sort((a, b) => {
-          const ta = a.trade_timestamp || a.timestamp || 0;
-          const tb = b.trade_timestamp || b.timestamp || 0;
-          return tb - ta;
-        });
+        trades = trades.slice().sort((a, b) =>
+          (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
+        );
 
-        const stats = computePnlStats(trades);
+        const stats          = computePnlStats(trades);
         const portfolioValue = window.gateioPortfolioValue || window.gateioMetrics?.total_value_usdt || 0;
-        renderPnlStats('gateio-pnl', stats, portfolioValue);
+        const midPrice       = window.gateioMetrics?.mid_price || 0;
+        renderPnlStats('gateio-pnl', stats, portfolioValue, midPrice);
 
         renderTradesTable('gateio-content', trades);
       } catch (error) {
