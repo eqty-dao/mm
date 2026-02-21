@@ -615,6 +615,7 @@ async function fetchMQTTStatus() {
     refreshAll();
     } else if (tabName === 'kucoin') {
     pageTitle.textContent = '💹 KuCoin - EQTY MM stats';
+    document.getElementById('docker-status').style.display = 'none';
     // Set checking status immediately
     statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
     // Fetch bot status and update
@@ -625,6 +626,7 @@ async function fetchMQTTStatus() {
     
   } else if (tabName === 'gateio') {
     pageTitle.textContent = '💹 Gate.io - EQTY MM stats';
+    document.getElementById('docker-status').style.display = 'none';
     // Set checking status immediately
     statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
     // Fetch bot status and update
