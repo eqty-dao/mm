@@ -219,6 +219,18 @@
     .stat-tip{display:none;position:absolute;bottom:130%;right:0;background:#1f2937;color:#f9fafb;font-size:11px;font-weight:400;line-height:1.5;padding:8px 11px;border-radius:6px;width:200px;text-align:left;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,0.4);white-space:normal;pointer-events:none;}
     [data-theme="dark"] .stat-help{background:#30363d;color:#8b949e;}
     [data-theme="dark"] .stat-tip{background:#e6edf3;color:#1f2937;}
+    .uptime-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-radius:8px;margin-bottom:16px;border:1px solid #e5e7eb;background:#f9fafb;font-size:13px;}
+    .uptime-bar.good{background:#f0fdf4;border-color:#86efac;color:#15803d;}
+    .uptime-bar.down{background:#fef2f2;border-color:#fca5a5;color:#dc2626;}
+    .uptime-bar .ub-status{font-weight:700;font-size:14px;}
+    .uptime-bar .ub-sep{color:#d1d5db;}
+    .uptime-bar .ub-label{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;}
+    .uptime-bar .ub-val{font-weight:600;}
+    [data-theme="dark"] .uptime-bar{background:#21262d;border-color:#30363d;color:#c9d1d9;}
+    [data-theme="dark"] .uptime-bar.good{background:#0d2818;border-color:#238636;color:#3fb950;}
+    [data-theme="dark"] .uptime-bar.down{background:#2d1515;border-color:#6d2626;color:#f85149;}
+    [data-theme="dark"] .uptime-bar .ub-sep{color:#30363d;}
+    [data-theme="dark"] .uptime-bar .ub-label{color:#6e7681;}
     .hm-wrap{overflow-x:auto;padding-bottom:4px;}
     .hm-row{display:flex;align-items:center;margin-bottom:2px;}
     .hm-label{width:46px;font-size:10px;color:#8b949e;text-align:right;padding-right:6px;flex-shrink:0;white-space:nowrap;}
@@ -239,7 +251,7 @@
     .days-selector{display:inline-flex;gap:5px;float:right;}
     .days-btn{padding:3px 12px;border-radius:999px;border:1px solid #d1d5db;background:white;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;}
     .days-btn:hover{background:#f3f4f6;} .days-btn.active{background:#4f46e5;color:white;border-color:#4f46e5;}
-    .uptime-chip{display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 12px;font-size:12px;color:#374151;}
+    .uptime-chip{display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 12px;font-size:12px;color:#374151;white-space:nowrap;}
     .uptime-chip.good{background:#f0fdf4;border-color:#86efac;color:#15803d;}
     .uptime-chip.warn{background:#fffbeb;border-color:#fcd34d;color:#92400e;}
     .uptime-chip.down{background:#fef2f2;border-color:#fca5a5;color:#dc2626;}
@@ -415,13 +427,12 @@
       try {
         const data = await fetchWithAuth('/docker/running');
         const isRunning = data===true||data==='true'||(typeof data==='object'&&(data.running||data.status==='running'));
-        const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
-        if(dc){dc.className=`uptime-chip ${isRunning?'good':'down'}`;dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`;dc.style.visibility='visible';}
-        if(kc)kc.style.visibility='hidden';if(gc)gc.style.visibility='hidden';
+        window.dockerRunning = isRunning;
+        syncChips(['chip-docker']);
         dockerInfo.innerHTML=`<pre>${JSON.stringify(data,null,2)}</pre>`;
       } catch(error) {
-        const dc=document.getElementById('chip-docker');
-        if(dc){dc.className='uptime-chip warn';dc.innerHTML='&#9888; <strong>Error</strong>';dc.style.visibility='visible';}
+        window.dockerRunning = false;
+        syncChips(['chip-docker']);
         dockerInfo.innerHTML=`<div class="error">Error: ${error.message}</div>`;
       }
     }
@@ -547,25 +558,24 @@ async function fetchMQTTStatus() {
   
   if (tabName === 'docker') {
     pageTitle.textContent = '🐳 Docker & Hummingbot Monitor';
+    syncChips(['chip-docker']);
     refreshAll();
   } else if (tabName === 'kucoin') {
     pageTitle.textContent = '💹 KuCoin - EQTY MM stats';
     if (statusDiv) statusDiv.style.display = 'none';
-    renderUptimeBar('kucoin', window.kucoinBotRunning ?? false);
-    startUptimeTick('kucoin');
+    syncChips(['chip-kucoin']);
     loadKucoinBalance(); loadKucoinBotStatus(); loadKucoinData();
     fetchBotRunningStatus();
   } else if (tabName === 'gateio') {
     pageTitle.textContent = '🏦 Gate.io - EQTY MM stats';
     if (statusDiv) statusDiv.style.display = 'none';
-    renderUptimeBar('gateio', window.gateioBotRunning ?? false);
-    startUptimeTick('gateio');
+    syncChips(['chip-gateio']);
     loadGateioBalance(); loadGateioBotStatus(); loadGateioData();
     fetchBotRunningStatus();
   } else if (tabName === 'activity') {
     pageTitle.textContent = '📊 Trade Activity Heatmap';
     if (statusDiv) statusDiv.style.display = 'none';
-    renderActivityChips();
+    syncChips(['chip-kucoin','chip-gateio']);
     fetchBotRunningStatus();
     loadActivityKucoin(14); loadActivityGateio(14);
   }
@@ -679,9 +689,10 @@ async function fetchBotRunningStatus() {
     trackDowntime('kucoin', window.kucoinBotRunning);
     trackDowntime('gateio', window.gateioBotRunning);
     const _at = document.querySelector('.tab.active')?.dataset.tab;
-    if (_at === 'kucoin') { renderUptimeBar('kucoin', window.kucoinBotRunning); startUptimeTick('kucoin'); }
-    else if (_at === 'gateio') { renderUptimeBar('gateio', window.gateioBotRunning); startUptimeTick('gateio'); }
-    else if (_at === 'activity') { renderActivityChips(); }
+    if (_at === 'docker')        syncChips(['chip-docker']);
+    else if (_at === 'kucoin')   syncChips(['chip-kucoin']);
+    else if (_at === 'gateio')   syncChips(['chip-gateio']);
+    else if (_at === 'activity') syncChips(['chip-kucoin','chip-gateio']);
     
   } catch (error) {
     console.error('Error fetching bot status:', error);
@@ -895,6 +906,17 @@ async function loadGateioBotStatus() {
         </div>
       ` : '';
 
+      const isRunning = exchange === 'kucoin' ? (window.kucoinBotRunning??false) : (window.gateioBotRunning??false);
+      const ex_key = exchange === 'kucoin' ? 'kucoin' : 'gateio';
+      const uStats = getUptimeStats(ex_key);
+      const uptimeBar = `<div class="uptime-bar ${isRunning?'good':'down'}">
+        <span class="ub-status">${isRunning?'&#9679; Running':'&#9675; Stopped'}</span>
+        ${uStats ? `<span class="ub-sep">|</span>
+        <span><span class="ub-label">Uptime&nbsp;</span><span class="ub-val" id="uptime-inline-${ex_key}">${uStats.d}d ${uStats.h}h ${uStats.m}m</span></span>
+        <span class="ub-sep">|</span>
+        <span><span class="ub-label">Availability&nbsp;</span><span class="ub-val">${uStats.pct.toFixed(2)}%</span></span>` : ''}
+      </div>`;
+
       const botIdDisplay = `
         <div style="margin-bottom: 15px; display: flex; justify-content: flex-end;">
           <span style="font-size: 13px; background: #f3f4f6; color: #374151; padding: 6px 12px; border-radius: 6px; font-family: monospace; font-weight: 500;">Bot ID: ${botId}</span>
@@ -902,6 +924,7 @@ async function loadGateioBotStatus() {
       `;
 
       const htmlContent = `
+        ${uptimeBar}
         ${botIdDisplay}
         ${balanceWarning}
 
@@ -1169,30 +1192,14 @@ async function loadGateioBalance() {
     function getUptimeStats(ex){
       const cfg=UPTIME_CONFIG[ex];if(!cfg?.start)return null;
       const tot=(Date.now()-cfg.start.getTime())/1000,dn=parseInt(localStorage.getItem(_dk(ex))||'0'),up=Math.max(0,tot-dn);
-      return{d:Math.floor(up/86400),h:Math.floor((up%86400)/3600),pct:(up/tot)*100};
+      return{d:Math.floor(up/86400),h:Math.floor((up%86400)/3600),m:Math.floor((up%3600)/60),pct:(up/tot)*100};
     }
-    function _hideAll(){['chip-docker','chip-kucoin','chip-gateio'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.visibility='hidden';});}
-    function renderUptimeBar(ex,running){
-      _hideAll();
-      const s=getUptimeStats(ex),rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
-      const chip=document.getElementById(ex==='kucoin'?'chip-kucoin':'chip-gateio');if(!chip)return;
-      chip.className=`uptime-chip ${rc}`;
-      // FIX: only show Running/Stopped — no exchange name prefix (too long on mobile)
-      let html=`${ri} <strong>${rl}</strong>`;
-      if(s)html+=`&nbsp;&nbsp;&#9201;&nbsp;<span id="uptime-timer-${ex}">${s.d}d ${s.h}h</span>&nbsp;&nbsp;${s.pct.toFixed(1)}%`;
-      chip.innerHTML=html;chip.style.visibility='visible';
-    }
-    function startUptimeTick(ex){
-      if(window[`_tick_${ex}`])return;
-      window[`_tick_${ex}`]=setInterval(()=>{const s=getUptimeStats(ex),el=document.getElementById(`uptime-timer-${ex}`);if(s&&el)el.textContent=`${s.d}d ${s.h}h`;},60000);
-    }
-    function renderActivityChips(){
-      _hideAll();
-      const kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
-      const kr=window.kucoinBotRunning??false,gr=window.gateioBotRunning??false;
-      // FIX: no exchange name — just Running/Stopped
-      if(kc){kc.className=`uptime-chip ${kr?'good':'down'}`;kc.innerHTML=`${kr?'&#9679;':'&#9675;'} <strong>${kr?'Running':'Stopped'}</strong>`;kc.style.visibility='visible';}
-      if(gc){gc.className=`uptime-chip ${gr?'good':'down'}`;gc.innerHTML=`${gr?'&#9679;':'&#9675;'} <strong>${gr?'Running':'Stopped'}</strong>`;gc.style.visibility='visible';}
+    // ── syncChips — uniform "● Running / ○ Stopped" on all chips, stable grid width
+    function syncChips(show){
+      const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
+      const chip=(el,ok)=>{if(el){el.className=`uptime-chip ${ok?'good':'down'}`;el.innerHTML=`${ok?'&#9679;':'&#9675;'} <strong>${ok?'Running':'Stopped'}</strong>`;}};
+      chip(dc,window.dockerRunning??false);chip(kc,window.kucoinBotRunning??false);chip(gc,window.gateioBotRunning??false);
+      [['chip-docker',dc],['chip-kucoin',kc],['chip-gateio',gc]].forEach(([id,el])=>{if(el)el.style.visibility=show.includes(id)?'visible':'hidden';});
     }
     // ── THEME ────────────────────────────────────────────────────────────────
     function toggleTheme(){
@@ -1283,11 +1290,10 @@ async function loadGateioBalance() {
         }
         html+=`</div>`;
       }
-      html+=`<div style="margin-left:48px;margin-top:10px;display:flex;align-items:center;gap:5px;">`;
-      html+=`<span style="font-size:10px;color:#6e7681;">0</span>`;
+      html+=`<div style="margin-left:48px;margin-top:10px;display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:#6e7681;">0</span>`;
       for(let i=0;i<=8;i++)html+=`<div style="width:14px;height:10px;border-radius:2px;background:${heatColor(i/8)};"></div>`;
-      html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div>`;
-      html+=`</div></div>`;el.innerHTML=html;
+      html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div></div></div>`;
+      el.innerHTML=html;
     }
     function hmCellClick(cid,dayKey,hour,cellEl){
       document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
@@ -1312,7 +1318,6 @@ async function loadGateioBalance() {
       }
       detailEl.innerHTML=`<div class="hm-detail"><div class="hm-detail-header"><span>&#128336; ${dayLabel} &nbsp;${hour}:00\u202f\u2014\u202f${(hour+1)%24}:00 &nbsp;&middot;&nbsp; ${trades.length} trade${trades.length>1?'s':''}</span><span class="hm-detail-close" onclick="document.getElementById('${cid}-detail').innerHTML='';document.querySelectorAll('#${cid} .hm-cell.selected').forEach(e=>{e.classList.remove('selected');e.dataset.open='';})">&#x2715;</span></div><div style="overflow-x:auto;"><table><thead><tr><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Time</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Side</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Price</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Qty</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Value</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }
-    // ── DATA LOADERS ─────────────────────────────────────────────────────────
     async function loadKucoinData(days=1){
       document.querySelectorAll('#kucoin-days-selector .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
       const el=document.getElementById('kucoin-content'),pe=document.getElementById('kucoin-pnl');
@@ -1364,6 +1369,7 @@ async function loadGateioBalance() {
 
 
     // -------- Initial load --------
+    syncChips(['chip-docker']);
     refreshAll();
     fetchBotRunningStatus();
     setInterval(fetchBotRunningStatus, REFRESH_INTERVAL);
