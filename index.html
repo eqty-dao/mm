@@ -158,11 +158,7 @@
       line-height: 1.5;
     }
 
-    .nav-grid {
-      display: grid; grid-template-columns: repeat(3, auto);
-      grid-template-rows: auto auto; gap: 6px 10px;
-      justify-content: start; margin-top: 10px; margin-bottom: 5px;
-    }
+    .nav-grid { display:grid; grid-template-columns:repeat(3,auto); grid-template-rows:auto auto; gap:6px 10px; justify-content:start; margin-top:10px; margin-bottom:5px; }
     .tab { background:#e5e7eb; border:none; border-radius:999px; padding:6px 16px; font-size:14px; cursor:pointer; color:#374151; transition:background 0.2s,color 0.2s; }
     .tab.active { background:#4f46e5; color:white; }
     .tab-content { display:none; }
@@ -210,7 +206,6 @@
       color: #b91c1c;
     }
 
-    /* P&L grid */
     .pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;}
     .pnl-stat{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 10px;text-align:center;}
     .pnl-stat .label{font-size:11px;color:#9ca3af;text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px;}
@@ -219,20 +214,16 @@
     .pnl-stat.positive{border-color:#86efac;background:#f0fdf4;} .pnl-stat.positive .value{color:#15803d;}
     .pnl-stat.negative{border-color:#fca5a5;background:#fef2f2;} .pnl-stat.negative .value{color:#dc2626;}
     .pnl-stat.neutral .value{color:#1e40af;} .pnl-stat.highlight{border-width:2px;}
-    /* Days */
     .days-selector{display:inline-flex;gap:5px;float:right;}
     .days-btn{padding:3px 12px;border-radius:999px;border:1px solid #d1d5db;background:white;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;}
     .days-btn:hover{background:#f3f4f6;} .days-btn.active{background:#4f46e5;color:white;border-color:#4f46e5;}
-    /* Uptime chips */
     .uptime-chip{display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 12px;font-size:13px;color:#374151;}
     .uptime-chip.good{background:#f0fdf4;border-color:#86efac;color:#15803d;}
     .uptime-chip.warn{background:#fffbeb;border-color:#fcd34d;color:#92400e;}
     .uptime-chip.down{background:#fef2f2;border-color:#fca5a5;color:#dc2626;}
     .uptime-chip strong{font-weight:700;}
-    /* Theme toggle */
     .theme-toggle-btn{background:none;border:1px solid #d1d5db;border-radius:999px;padding:5px 12px;font-size:15px;cursor:pointer;transition:all .2s;line-height:1;align-self:flex-start;margin-top:10px;}
     .theme-toggle-btn:hover{transform:scale(1.1);}
-    /* ── DARK THEME ── */
     [data-theme="dark"] body{background:#0d1117;}
     [data-theme="dark"] header,[data-theme="dark"] .card{background:#161b22;box-shadow:0 4px 12px rgba(0,0,0,.5);}
     [data-theme="dark"] h1,[data-theme="dark"] .card h2,[data-theme="dark"] .container-name{color:#f0f6fc;}
@@ -285,7 +276,7 @@
         </div>
         <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle theme">&#9728;&#65039;</button>
       </div>
-      <div id="docker-status"><span class="status-badge status-unknown">Checking...</span></div>
+      <div id="docker-status" style="display:none;"></div>
     </header>
 
     <!-- DOCKER TAB -->
@@ -395,27 +386,25 @@
 
     // -------- Docker tab logic --------
     async function checkDockerStatus() {
+      const dockerInfo = document.getElementById('docker-info');
       try {
         const data = await fetchWithAuth('/docker/running');
-        const statusBadge = document.getElementById('docker-status');
-        const dockerInfo = document.getElementById('docker-info');
-
         const isRunning =
           data === true ||
           data === 'true' ||
           (typeof data === 'object' && (data.running || data.status === 'running'));
-
-        statusBadge.innerHTML = isRunning
-          ? '<span class="status-badge status-running">✓ Running</span>'
-          : '<span class="status-badge status-stopped">✗ Stopped</span>';
-
+        // Docker tab: only show ● Running — timer/uptime are bot metrics, not docker's
+        const dc = document.getElementById('chip-docker');
+        const kc = document.getElementById('chip-kucoin');
+        const gc = document.getElementById('chip-gateio');
+        if (dc) { dc.className=`uptime-chip ${isRunning?'good':'down'}`; dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`; dc.style.visibility='visible'; }
+        if (kc) kc.style.visibility = 'hidden';
+        if (gc) gc.style.visibility = 'hidden';
         dockerInfo.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
       } catch (error) {
-        document.getElementById('docker-status').innerHTML =
-          '<span class="status-badge status-unknown">Error</span>';
-        document.getElementById('docker-info').innerHTML =
-          `<div class="error">Error: ${error.message}</div>`;
-      }
+        const dc = document.getElementById('chip-docker');
+        if (dc) { dc.className='uptime-chip warn'; dc.innerHTML='&#9888; <strong>Error</strong>'; dc.style.visibility='visible'; }
+        dockerInfo.innerHTML =
     }
 
     async function fetchActiveContainers() {
@@ -539,10 +528,6 @@ async function fetchMQTTStatus() {
   
   if (tabName === 'docker') {
     pageTitle.textContent = '🐳 Docker & Hummingbot Monitor';
-    if (statusDiv) statusDiv.style.display = '';
-    ['chip-docker','chip-kucoin','chip-gateio'].forEach(id => {
-      const ch = document.getElementById(id); if (ch) ch.style.visibility = 'hidden';
-    });
     refreshAll();
 
   } else if (tabName === 'kucoin') {
@@ -550,9 +535,7 @@ async function fetchMQTTStatus() {
     if (statusDiv) statusDiv.style.display = 'none';
     renderUptimeBar('kucoin', window.kucoinBotRunning ?? false);
     startUptimeTick('kucoin');
-    loadKucoinBalance();
-    loadKucoinBotStatus();
-    loadKucoinData();
+    loadKucoinBalance(); loadKucoinBotStatus(); loadKucoinData();
     fetchBotRunningStatus();
 
   } else if (tabName === 'gateio') {
@@ -560,9 +543,7 @@ async function fetchMQTTStatus() {
     if (statusDiv) statusDiv.style.display = 'none';
     renderUptimeBar('gateio', window.gateioBotRunning ?? false);
     startUptimeTick('gateio');
-    loadGateioBalance();
-    loadGateioBotStatus();
-    loadGateioData();
+    loadGateioBalance(); loadGateioBotStatus(); loadGateioData();
     fetchBotRunningStatus();
   }
 } 
@@ -674,15 +655,9 @@ async function fetchBotRunningStatus() {
     window.gateioBotRunning = data.gateio?.bot_running === 1;
     trackDowntime('kucoin', window.kucoinBotRunning);
     trackDowntime('gateio', window.gateioBotRunning);
-    // Only update chips — #docker-status is owned exclusively by checkDockerStatus()
     const _at = document.querySelector('.tab.active')?.dataset.tab;
-    if (_at === 'kucoin') {
-      renderUptimeBar('kucoin', window.kucoinBotRunning);
-      startUptimeTick('kucoin');
-    } else if (_at === 'gateio') {
-      renderUptimeBar('gateio', window.gateioBotRunning);
-      startUptimeTick('gateio');
-    }
+    if (_at === 'kucoin') { renderUptimeBar('kucoin', window.kucoinBotRunning); startUptimeTick('kucoin'); }
+    else if (_at === 'gateio') { renderUptimeBar('gateio', window.gateioBotRunning); startUptimeTick('gateio'); }
     
   } catch (error) {
     console.error('Error fetching bot status:', error);
@@ -1163,77 +1138,41 @@ async function loadGateioBalance() {
 }
 
 
-    // ================================================================
-    // UPTIME
-    // ================================================================
-    const UPTIME_CONFIG = {
-      kucoin: { start: new Date('2026-02-01T00:00:00') },
-      gateio: { start: null }
-    };
+    const UPTIME_CONFIG={kucoin:{start:new Date('2026-02-01T00:00:00')},gateio:{start:null}};
     function _dk(ex){return`uptime_down_s_${ex}`;}
-    function trackDowntime(ex,ok){
-      if(!ok){const k=_dk(ex);localStorage.setItem(k,parseInt(localStorage.getItem(k)||'0')+Math.round(REFRESH_INTERVAL/1000));}
-    }
+    function trackDowntime(ex,ok){if(!ok){const k=_dk(ex);localStorage.setItem(k,parseInt(localStorage.getItem(k)||'0')+Math.round(REFRESH_INTERVAL/1000));}}
     function getUptimeStats(ex){
       const cfg=UPTIME_CONFIG[ex];if(!cfg?.start)return null;
-      const tot=(Date.now()-cfg.start.getTime())/1000;
-      const dn=parseInt(localStorage.getItem(_dk(ex))||'0');
-      const up=Math.max(0,tot-dn);
+      const tot=(Date.now()-cfg.start.getTime())/1000,dn=parseInt(localStorage.getItem(_dk(ex))||'0'),up=Math.max(0,tot-dn);
       return{d:Math.floor(up/86400),h:Math.floor((up%86400)/3600),m:Math.floor((up%3600)/60),pct:(up/tot)*100};
     }
     function renderUptimeBar(ex,running){
       const s=getUptimeStats(ex);
       const rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
-      const dc=document.getElementById('chip-docker');
-      const kc=document.getElementById('chip-kucoin');
-      const gc=document.getElementById('chip-gateio');
+      const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
       if(dc){dc.className=`uptime-chip ${rc}`;dc.innerHTML=`${ri} <strong>${rl}</strong>`;dc.style.visibility='visible';}
-      if(!s){
-        if(kc)kc.style.visibility='hidden';
-        if(gc){gc.className='uptime-chip';gc.innerHTML=`&#128338; <strong>Not started</strong>`;gc.style.visibility='visible';}
-        return;
-      }
+      if(!s){if(kc)kc.style.visibility='hidden';if(gc){gc.className='uptime-chip';gc.innerHTML=`&#128338; <strong>Not started</strong>`;gc.style.visibility='visible';}return;}
       const pc=s.pct>=95?'good':s.pct>=90?'warn':'down';
       if(kc){kc.className='uptime-chip';kc.innerHTML=`&#9201; <strong id="uptime-timer-${ex}">${s.d}d ${s.h}h ${s.m}m</strong>`;kc.style.visibility='visible';}
       if(gc){gc.className=`uptime-chip ${pc}`;gc.innerHTML=`&#128200; <strong>${s.pct.toFixed(2)}%</strong>&nbsp;uptime`;gc.style.visibility='visible';}
     }
     function startUptimeTick(ex){
       if(window[`_tick_${ex}`])return;
-      window[`_tick_${ex}`]=setInterval(()=>{
-        const s=getUptimeStats(ex),el=document.getElementById(`uptime-timer-${ex}`);
-        if(s&&el)el.textContent=`${s.d}d ${s.h}h ${s.m}m`;
-      },60000);
+      window[`_tick_${ex}`]=setInterval(()=>{const s=getUptimeStats(ex),el=document.getElementById(`uptime-timer-${ex}`);if(s&&el)el.textContent=`${s.d}d ${s.h}h ${s.m}m`;},60000);
     }
-
-    // ================================================================
-    // THEME
-    // ================================================================
     function toggleTheme(){
       const h=document.documentElement,n=(h.getAttribute('data-theme')||'dark')==='dark'?'light':'dark';
       h.setAttribute('data-theme',n);localStorage.setItem('theme',n);
-      const b=document.getElementById('theme-toggle');
-      if(b)b.textContent=n==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
+      const b=document.getElementById('theme-toggle');if(b)b.textContent=n==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
     }
     document.addEventListener('DOMContentLoaded',()=>{
-      const s=localStorage.getItem('theme')||'dark';
-      document.documentElement.setAttribute('data-theme',s);
-      const b=document.getElementById('theme-toggle');
-      if(b)b.textContent=s==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
+      const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);
+      const b=document.getElementById('theme-toggle');if(b)b.textContent=s==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
     });
-
-    // ================================================================
-    // P&L
-    // ================================================================
     function computePnlStats(trades){
       let bv=0,bq=0,bc=0,sv=0,sq=0,sc=0,fees=0;
-      for(const t of trades){
-        const p=parseFloat(t.price)||0,q=parseFloat(String(t.quantity??'').replace(/\.$/,''))||0;
-        const f=parseFloat(t.raw_json?.trade_fee?.percent??'0.003'),n=p*q;fees+=n*f;
-        if((t.trade_type||'').toUpperCase()==='BUY'){bv+=n;bq+=q;bc++;}else{sv+=n;sq+=q;sc++;}
-      }
-      return{buyVolume:bv,buyQty:bq,buyCount:bc,sellVolume:sv,sellQty:sq,sellCount:sc,
-        totalFees:fees,tradePnl:sv-bv,netPnl:sv-bv-fees,totalVolume:bv+sv,totalEqtyVol:bq+sq,
-        avgBuyPrice:bq>0?bv/bq:0,avgSellPrice:sq>0?sv/sq:0,netEqtyChange:bq-sq,tradeCount:trades.length};
+      for(const t of trades){const p=parseFloat(t.price)||0,q=parseFloat(String(t.quantity??'').replace(/\.$/,''))||0,f=parseFloat(t.raw_json?.trade_fee?.percent??'0.003'),n=p*q;fees+=n*f;if((t.trade_type||'').toUpperCase()==='BUY'){bv+=n;bq+=q;bc++;}else{sv+=n;sq+=q;sc++;}}
+      return{buyVolume:bv,buyQty:bq,buyCount:bc,sellVolume:sv,sellQty:sq,sellCount:sc,totalFees:fees,tradePnl:sv-bv,netPnl:sv-bv-fees,totalVolume:bv+sv,totalEqtyVol:bq+sq,avgBuyPrice:bq>0?bv/bq:0,avgSellPrice:sq>0?sv/sq:0,netEqtyChange:bq-sq,tradeCount:trades.length};
     }
     function renderPnlStats(id,s,pv,mp){
       const el=document.getElementById(id);if(!el)return;
@@ -1267,10 +1206,7 @@ async function loadGateioBalance() {
         t=t.slice().sort((a,b)=>(b.trade_timestamp||b.timestamp||0)-(a.trade_timestamp||a.timestamp||0));
         renderPnlStats('kucoin-pnl',computePnlStats(t),window.kucoinPortfolioValue||window.eqtyBotMetrics?.total_value_usdt||0,window.eqtyBotMetrics?.mid_price||0);
         renderTradesTable('kucoin-content',t);
-      }catch(e){
-        el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;
-        if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}
-      }
+      }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}}
     }
     async function loadGateioData(days=1){
       document.querySelectorAll('#gateio-days-selector .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
@@ -1283,10 +1219,7 @@ async function loadGateioBalance() {
         t=t.slice().sort((a,b)=>(b.trade_timestamp||b.timestamp||0)-(a.trade_timestamp||a.timestamp||0));
         renderPnlStats('gateio-pnl',computePnlStats(t),window.gateioPortfolioValue||window.gateioMetrics?.total_value_usdt||0,window.gateioMetrics?.mid_price||0);
         renderTradesTable('gateio-content',t);
-      }catch(e){
-        el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;
-        if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}
-      }
+      }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}}
     }
 
 
@@ -1299,6 +1232,4 @@ async function loadGateioBalance() {
   </script>
 </body>
 </html>
-
-
 
