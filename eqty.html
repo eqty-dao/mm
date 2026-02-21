@@ -393,7 +393,7 @@
           data === true ||
           data === 'true' ||
           (typeof data === 'object' && (data.running || data.status === 'running'));
-        // Docker tab: only show ● Running — timer/uptime are bot metrics, not docker's
+        // Option A: Docker tab shows only ● Running chip (no bot uptime metrics)
         const dc = document.getElementById('chip-docker');
         const kc = document.getElementById('chip-kucoin');
         const gc = document.getElementById('chip-gateio');
@@ -404,7 +404,8 @@
       } catch (error) {
         const dc = document.getElementById('chip-docker');
         if (dc) { dc.className='uptime-chip warn'; dc.innerHTML='&#9888; <strong>Error</strong>'; dc.style.visibility='visible'; }
-        dockerInfo.innerHTML =
+        dockerInfo.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
     }
 
     async function fetchActiveContainers() {
@@ -1147,8 +1148,7 @@ async function loadGateioBalance() {
       return{d:Math.floor(up/86400),h:Math.floor((up%86400)/3600),m:Math.floor((up%3600)/60),pct:(up/tot)*100};
     }
     function renderUptimeBar(ex,running){
-      const s=getUptimeStats(ex);
-      const rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
+      const s=getUptimeStats(ex),rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
       const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
       if(dc){dc.className=`uptime-chip ${rc}`;dc.innerHTML=`${ri} <strong>${rl}</strong>`;dc.style.visibility='visible';}
       if(!s){if(kc)kc.style.visibility='hidden';if(gc){gc.className='uptime-chip';gc.innerHTML=`&#128338; <strong>Not started</strong>`;gc.style.visibility='visible';}return;}
@@ -1232,4 +1232,6 @@ async function loadGateioBalance() {
   </script>
 </body>
 </html>
+
+
 
