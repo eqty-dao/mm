@@ -207,23 +207,33 @@
     }
 
     .pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;}
-    .pnl-stat{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 10px;text-align:center;}
+    .pnl-stat{position:relative;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 10px;text-align:center;}
     .pnl-stat .label{font-size:11px;color:#9ca3af;text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px;}
     .pnl-stat .value{font-size:16px;font-weight:700;color:#111827;line-height:1.2;}
     .pnl-stat .sub{font-size:11px;color:#9ca3af;margin-top:3px;}
     .pnl-stat.positive{border-color:#86efac;background:#f0fdf4;} .pnl-stat.positive .value{color:#15803d;}
     .pnl-stat.negative{border-color:#fca5a5;background:#fef2f2;} .pnl-stat.negative .value{color:#dc2626;}
     .pnl-stat.neutral .value{color:#1e40af;} .pnl-stat.highlight{border-width:2px;}
+    /* Tooltip */
+    .stat-help{position:absolute;top:5px;right:7px;width:14px;height:14px;border-radius:50%;background:#d1d5db;color:#6b7280;font-size:9px;font-weight:700;line-height:14px;text-align:center;cursor:default;user-select:none;}
+    .stat-help:hover .stat-tip{display:block;}
+    .stat-tip{display:none;position:absolute;bottom:120%;right:0;background:#1f2937;color:#f9fafb;font-size:11px;font-weight:400;line-height:1.5;padding:7px 10px;border-radius:6px;width:190px;text-align:left;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,0.35);white-space:normal;pointer-events:none;}
+    [data-theme="dark"] .stat-help{background:#30363d;color:#8b949e;}
+    [data-theme="dark"] .stat-tip{background:#e6edf3;color:#1f2937;}
+    /* Days */
     .days-selector{display:inline-flex;gap:5px;float:right;}
     .days-btn{padding:3px 12px;border-radius:999px;border:1px solid #d1d5db;background:white;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;}
     .days-btn:hover{background:#f3f4f6;} .days-btn.active{background:#4f46e5;color:white;border-color:#4f46e5;}
+    /* Uptime chips */
     .uptime-chip{display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 12px;font-size:13px;color:#374151;}
     .uptime-chip.good{background:#f0fdf4;border-color:#86efac;color:#15803d;}
     .uptime-chip.warn{background:#fffbeb;border-color:#fcd34d;color:#92400e;}
     .uptime-chip.down{background:#fef2f2;border-color:#fca5a5;color:#dc2626;}
     .uptime-chip strong{font-weight:700;}
+    /* Theme toggle */
     .theme-toggle-btn{background:none;border:1px solid #d1d5db;border-radius:999px;padding:5px 12px;font-size:15px;cursor:pointer;transition:all .2s;line-height:1;align-self:flex-start;margin-top:10px;}
     .theme-toggle-btn:hover{transform:scale(1.1);}
+    /* DARK THEME */
     [data-theme="dark"] body{background:#0d1117;}
     [data-theme="dark"] header,[data-theme="dark"] .card{background:#161b22;box-shadow:0 4px 12px rgba(0,0,0,.5);}
     [data-theme="dark"] h1,[data-theme="dark"] .card h2,[data-theme="dark"] .container-name{color:#f0f6fc;}
@@ -390,20 +400,16 @@
       try {
         const data = await fetchWithAuth('/docker/running');
         const isRunning =
-          data === true ||
-          data === 'true' ||
+          data === true || data === 'true' ||
           (typeof data === 'object' && (data.running || data.status === 'running'));
-        // Option A: Docker tab shows only ● Running chip (no bot uptime metrics)
-        const dc = document.getElementById('chip-docker');
-        const kc = document.getElementById('chip-kucoin');
-        const gc = document.getElementById('chip-gateio');
-        if (dc) { dc.className=`uptime-chip ${isRunning?'good':'down'}`; dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`; dc.style.visibility='visible'; }
-        if (kc) kc.style.visibility = 'hidden';
-        if (gc) gc.style.visibility = 'hidden';
+        const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
+        if(dc){dc.className=`uptime-chip ${isRunning?'good':'down'}`;dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`;dc.style.visibility='visible';}
+        if(kc)kc.style.visibility='hidden';
+        if(gc)gc.style.visibility='hidden';
         dockerInfo.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
       } catch (error) {
-        const dc = document.getElementById('chip-docker');
-        if (dc) { dc.className='uptime-chip warn'; dc.innerHTML='&#9888; <strong>Error</strong>'; dc.style.visibility='visible'; }
+        const dc=document.getElementById('chip-docker');
+        if(dc){dc.className='uptime-chip warn';dc.innerHTML='&#9888; <strong>Error</strong>';dc.style.visibility='visible';}
         dockerInfo.innerHTML = `<div class="error">Error: ${error.message}</div>`;
       }
     }
@@ -530,7 +536,6 @@ async function fetchMQTTStatus() {
   if (tabName === 'docker') {
     pageTitle.textContent = '🐳 Docker & Hummingbot Monitor';
     refreshAll();
-
   } else if (tabName === 'kucoin') {
     pageTitle.textContent = '💹 KuCoin - EQTY MM stats';
     if (statusDiv) statusDiv.style.display = 'none';
@@ -538,7 +543,6 @@ async function fetchMQTTStatus() {
     startUptimeTick('kucoin');
     loadKucoinBalance(); loadKucoinBotStatus(); loadKucoinData();
     fetchBotRunningStatus();
-
   } else if (tabName === 'gateio') {
     pageTitle.textContent = '🏦 Gate.io - EQTY MM stats';
     if (statusDiv) statusDiv.style.display = 'none';
@@ -1181,18 +1185,19 @@ async function loadGateioBalance() {
       const fp=n=>n===null?'\u2014':`${n>=0?'+':''}${n.toFixed(3)}%`;
       const cls=n=>n===null?'neutral':n>=0?'positive':'negative';
       const ic=s.netEqtyChange>0?'positive':s.netEqtyChange<0?'negative':'neutral';
+      const tip=t=>`<span class="stat-help">?<span class="stat-tip">${t}</span></span>`;
       el.innerHTML=`<div class="pnl-grid">
-        <div class="pnl-stat neutral"><div class="label">Trades</div><div class="value">${s.tradeCount}</div><div class="sub">${s.buyCount}B / ${s.sellCount}S</div></div>
-        <div class="pnl-stat neutral"><div class="label">Volume</div><div class="value">$${s.totalVolume.toFixed(2)}</div><div class="sub">notional USDT</div></div>
-        <div class="pnl-stat neutral"><div class="label">EQTY Vol</div><div class="value">${Math.round(s.totalEqtyVol).toLocaleString()}</div><div class="sub">tokens moved</div></div>
-        <div class="pnl-stat neutral"><div class="label">Avg Buy</div><div class="value">${s.avgBuyPrice>0?s.avgBuyPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.buyQty).toLocaleString()} EQTY</div></div>
-        <div class="pnl-stat neutral"><div class="label">Avg Sell</div><div class="value">${s.avgSellPrice>0?s.avgSellPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.sellQty).toLocaleString()} EQTY</div></div>
-        <div class="pnl-stat ${cls(s.tradePnl)}"><div class="label">Trade P&L</div><div class="value">${fmt(s.tradePnl)}</div><div class="sub">gross (pre-fee)</div></div>
-        <div class="pnl-stat negative"><div class="label">Fees Paid</div><div class="value">-$${s.totalFees.toFixed(4)}</div><div class="sub">${(s.totalFees/s.totalVolume*100).toFixed(2)}% effective</div></div>
-        <div class="pnl-stat ${cls(s.netPnl)} highlight"><div class="label">Net P&L</div><div class="value">${fmt(s.netPnl)}</div><div class="sub">after fees</div></div>
-        <div class="pnl-stat ${cls(tpnl)} highlight"><div class="label">True P&L</div><div class="value">${fmt(tpnl)}</div><div class="sub" style="font-size:10px;">${mp>0?`cash ${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()} EQTY @ ${mp.toFixed(6)}`:'load bot status first'}</div></div>
-        <div class="pnl-stat ${cls(ret)} highlight"><div class="label">Return %</div><div class="value">${fp(ret)}</div><div class="sub">${pv>0?`on $${pv.toFixed(0)}`:'load balance first'}</div></div>
-        <div class="pnl-stat ${ic}"><div class="label">Net EQTY \u0394</div><div class="value">${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()}</div><div class="sub">${s.netEqtyChange>0?'\u2191 accumulating':s.netEqtyChange<0?'\u2193 distributing':'= neutral'}</div></div>
+        <div class="pnl-stat neutral">${tip('Number of executed trades in the period (B\u202f=\u202fbuys, S\u202f=\u202fsells)')}<div class="label">Trades</div><div class="value">${s.tradeCount}</div><div class="sub">${s.buyCount}B / ${s.sellCount}S</div></div>
+        <div class="pnl-stat neutral">${tip('Total notional value traded in USDT (buys + sells combined)')}<div class="label">Volume</div><div class="value">$${s.totalVolume.toFixed(2)}</div><div class="sub">notional USDT</div></div>
+        <div class="pnl-stat neutral">${tip('Total EQTY tokens moved across all trades in the period')}<div class="label">EQTY Vol</div><div class="value">${Math.round(s.totalEqtyVol).toLocaleString()}</div><div class="sub">tokens moved</div></div>
+        <div class="pnl-stat neutral">${tip('Weighted average price paid per EQTY across all buy orders')}<div class="label">Avg Buy</div><div class="value">${s.avgBuyPrice>0?s.avgBuyPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.buyQty).toLocaleString()} EQTY</div></div>
+        <div class="pnl-stat neutral">${tip('Weighted average price received per EQTY across all sell orders')}<div class="label">Avg Sell</div><div class="value">${s.avgSellPrice>0?s.avgSellPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.sellQty).toLocaleString()} EQTY</div></div>
+        <div class="pnl-stat ${cls(s.tradePnl)}">${tip('Sell revenue minus buy cost \u2014 gross profit before fees are deducted')}<div class="label">Trade P&L</div><div class="value">${fmt(s.tradePnl)}</div><div class="sub">gross (pre-fee)</div></div>
+        <div class="pnl-stat negative">${tip('Total trading fees paid to the exchange across all trades')}<div class="label">Fees Paid</div><div class="value">-$${s.totalFees.toFixed(4)}</div><div class="sub">${(s.totalFees/s.totalVolume*100).toFixed(2)}% effective</div></div>
+        <div class="pnl-stat ${cls(s.netPnl)} highlight">${tip('Trade P&L after deducting all fees paid to the exchange')}<div class="label">Net P&L</div><div class="value">${fmt(s.netPnl)}</div><div class="sub">after fees</div></div>
+        <div class="pnl-stat ${cls(tpnl)} highlight">${tip('Net P&L + value of unsold EQTY inventory at current mid price \u2014 most accurate profitability view')}<div class="label">True P&L</div><div class="value">${fmt(tpnl)}</div><div class="sub" style="font-size:10px;">${mp>0?`cash ${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()} EQTY @ ${mp.toFixed(6)}`:'load bot status first'}</div></div>
+        <div class="pnl-stat ${cls(ret)} highlight">${tip('Net P&L expressed as a percentage of total portfolio value')}<div class="label">Return %</div><div class="value">${fp(ret)}</div><div class="sub">${pv>0?`on $${pv.toFixed(0)}`:'load balance first'}</div></div>
+        <div class="pnl-stat ${ic}">${tip('Net change in EQTY holdings: positive = accumulating tokens, negative = distributing them into the market')}<div class="label">Net EQTY \u0394</div><div class="value">${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()}</div><div class="sub">${s.netEqtyChange>0?'\u2191 accumulating':s.netEqtyChange<0?'\u2193 distributing':'= neutral'}</div></div>
       </div>`;
     }
     async function loadKucoinData(days=1){
