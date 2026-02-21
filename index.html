@@ -398,18 +398,16 @@
       const dockerInfo = document.getElementById('docker-info');
       try {
         const data = await fetchWithAuth('/docker/running');
-        const isRunning =
-          data === true || data === 'true' ||
-          (typeof data === 'object' && (data.running || data.status === 'running'));
+        const isRunning = data===true||data==='true'||(typeof data==='object'&&(data.running||data.status==='running'));
         const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
         if(dc){dc.className=`uptime-chip ${isRunning?'good':'down'}`;dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`;dc.style.visibility='visible';}
         if(kc)kc.style.visibility='hidden';
         if(gc)gc.style.visibility='hidden';
-        dockerInfo.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-      } catch (error) {
+        dockerInfo.innerHTML=`<pre>${JSON.stringify(data,null,2)}</pre>`;
+      } catch(error) {
         const dc=document.getElementById('chip-docker');
         if(dc){dc.className='uptime-chip warn';dc.innerHTML='&#9888; <strong>Error</strong>';dc.style.visibility='visible';}
-        dockerInfo.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        dockerInfo.innerHTML=`<div class="error">Error: ${error.message}</div>`;
       }
     }
 
@@ -1164,7 +1162,6 @@ async function loadGateioBalance() {
       if(window[`_tick_${ex}`])return;
       window[`_tick_${ex}`]=setInterval(()=>{const s=getUptimeStats(ex),el=document.getElementById(`uptime-timer-${ex}`);if(s&&el)el.textContent=`${s.d}d ${s.h}h ${s.m}m`;},60000);
     }
-
     // ── THEME ────────────────────────────────────────────────────────────────
     function toggleTheme(){
       const h=document.documentElement,n=(h.getAttribute('data-theme')||'dark')==='dark'?'light':'dark';
@@ -1175,7 +1172,6 @@ async function loadGateioBalance() {
       const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);
       const b=document.getElementById('theme-toggle');if(b)b.textContent=s==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
     });
-
     // ── P&L STATS ────────────────────────────────────────────────────────────
     function computePnlStats(trades){
       let bv=0,bq=0,bc=0,sv=0,sq=0,sc=0,fees=0;
@@ -1186,12 +1182,10 @@ async function loadGateioBalance() {
         if((t.trade_type||'').toUpperCase()==='BUY'){bv+=n;bq+=q;bc++;}else{sv+=n;sq+=q;sc++;}
       }
       const avgBuy=bq>0?bv/bq:0,avgSell=sq>0?sv/sq:0;
-      const spread=(avgBuy>0&&avgSell>0)?avgSell-avgBuy:0;
-      const spreadBps=avgBuy>0&&spread!==0?(spread/avgBuy)*10000:0;
+      const spread=(avgBuy>0&&avgSell>0)?avgSell-avgBuy:0,spreadBps=avgBuy>0&&spread!==0?(spread/avgBuy)*10000:0;
       return{buyVolume:bv,buyQty:bq,buyCount:bc,sellVolume:sv,sellQty:sq,sellCount:sc,
         totalFees:fees,tradePnl:sv-bv,netPnl:sv-bv-fees,totalVolume:bv+sv,totalEqtyVol:bq+sq,
-        avgBuyPrice:avgBuy,avgSellPrice:avgSell,netEqtyChange:bq-sq,tradeCount:trades.length,
-        spread,spreadBps};
+        avgBuyPrice:avgBuy,avgSellPrice:avgSell,netEqtyChange:bq-sq,tradeCount:trades.length,spread,spreadBps};
     }
     function renderPnlStats(id,s,pv,mp){
       const el=document.getElementById(id);if(!el)return;
@@ -1200,7 +1194,7 @@ async function loadGateioBalance() {
       const fp=n=>n===null?'\u2014':`${n>=0?'+':''}${n.toFixed(3)}%`;
       const cls=n=>n===null?'neutral':n>=0?'positive':'negative';
       const ic=s.netEqtyChange>0?'positive':s.netEqtyChange<0?'negative':'neutral';
-      const sc=s.spread>0?'positive':s.spread<0?'negative':'neutral';
+      const sc2=s.spread>0?'positive':s.spread<0?'negative':'neutral';
       const tip=t=>`<span class="stat-help">?<span class="stat-tip">${t}</span></span>`;
       el.innerHTML=`<div class="pnl-grid">
         <div class="pnl-stat neutral">${tip('Number of executed trades in the period (B\u202f=\u202fbuys, S\u202f=\u202fsells)')}<div class="label">Trades</div><div class="value">${s.tradeCount}</div><div class="sub">${s.buyCount}B / ${s.sellCount}S</div></div>
@@ -1208,23 +1202,25 @@ async function loadGateioBalance() {
         <div class="pnl-stat neutral">${tip('Total EQTY tokens moved across all trades in the period')}<div class="label">EQTY Vol</div><div class="value">${Math.round(s.totalEqtyVol).toLocaleString()}</div><div class="sub">tokens moved</div></div>
         <div class="pnl-stat neutral">${tip('Weighted average price paid per EQTY across all buy orders')}<div class="label">Avg Buy</div><div class="value">${s.avgBuyPrice>0?s.avgBuyPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.buyQty).toLocaleString()} EQTY</div></div>
         <div class="pnl-stat neutral">${tip('Weighted average price received per EQTY across all sell orders')}<div class="label">Avg Sell</div><div class="value">${s.avgSellPrice>0?s.avgSellPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.sellQty).toLocaleString()} EQTY</div></div>
-        <div class="pnl-stat ${sc} highlight">${tip('Avg Sell \u2212 Avg Buy. The core MM metric: how many USDT and basis points the bot earns per round-trip trade.')}<div class="label">Spread Capture</div><div class="value">${s.spread>=0?'+':''}${s.spread.toFixed(6)}</div><div class="sub">${s.spreadBps>=0?'+':''}${s.spreadBps.toFixed(1)} bps</div></div>
-        <div class="pnl-stat ${cls(s.tradePnl)}">${tip('Sell revenue minus buy cost \u2014 gross profit before fees are deducted')}<div class="label">Trade P&L</div><div class="value">${fmt(s.tradePnl)}</div><div class="sub">gross (pre-fee)</div></div>
+        <div class="pnl-stat ${sc2} highlight">${tip('Avg Sell \u2212 Avg Buy. The core MM metric: how many USDT and basis points the bot earns per round-trip.')}<div class="label">Spread Capture</div><div class="value">${s.spread>=0?'+':''}${s.spread.toFixed(6)}</div><div class="sub">${s.spreadBps>=0?'+':''}${s.spreadBps.toFixed(1)} bps</div></div>
+        <div class="pnl-stat ${cls(s.tradePnl)}">${tip('Sell revenue minus buy cost \u2014 gross profit before fees')}<div class="label">Trade P&L</div><div class="value">${fmt(s.tradePnl)}</div><div class="sub">gross (pre-fee)</div></div>
         <div class="pnl-stat negative">${tip('Total trading fees paid to the exchange across all trades')}<div class="label">Fees Paid</div><div class="value">-$${s.totalFees.toFixed(4)}</div><div class="sub">${s.totalVolume>0?(s.totalFees/s.totalVolume*100).toFixed(2):0}% effective</div></div>
         <div class="pnl-stat ${cls(s.netPnl)} highlight">${tip('Trade P&L after deducting all fees paid to the exchange')}<div class="label">Net P&L</div><div class="value">${fmt(s.netPnl)}</div><div class="sub">after fees</div></div>
-        <div class="pnl-stat ${cls(tpnl)} highlight">${tip('Net P&L + value of unsold EQTY inventory at current mid price \u2014 most accurate profitability view')}<div class="label">True P&L</div><div class="value">${fmt(tpnl)}</div><div class="sub" style="font-size:10px;">${mp>0?`inv ${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()} EQTY @ ${mp.toFixed(6)}`:'load bot status first'}</div></div>
-        <div class="pnl-stat ${cls(ret)} highlight">${tip('Net P&L expressed as a percentage of total portfolio value')}<div class="label">Return %</div><div class="value">${fp(ret)}</div><div class="sub">${pv>0?`on $${pv.toFixed(0)}`:'load balance first'}</div></div>
-        <div class="pnl-stat ${ic}">${tip('Net change in EQTY holdings: positive = accumulating tokens, negative = distributing them into the market')}<div class="label">Net EQTY \u0394</div><div class="value">${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()}</div><div class="sub">${s.netEqtyChange>0?'\u2191 accumulating':s.netEqtyChange<0?'\u2193 distributing':'= neutral'}</div></div>
+        <div class="pnl-stat ${cls(tpnl)} highlight">${tip('Net P&L + unsold EQTY inventory at current mid price \u2014 most accurate profitability view')}<div class="label">True P&L</div><div class="value">${fmt(tpnl)}</div><div class="sub" style="font-size:10px;">${mp>0?`inv ${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()} EQTY @ ${mp.toFixed(6)}`:'load bot status first'}</div></div>
+        <div class="pnl-stat ${cls(ret)} highlight">${tip('Net P&L as a percentage of total portfolio value')}<div class="label">Return %</div><div class="value">${fp(ret)}</div><div class="sub">${pv>0?`on $${pv.toFixed(0)}`:'load balance first'}</div></div>
+        <div class="pnl-stat ${ic}">${tip('Net change in EQTY holdings: positive = accumulating, negative = distributing into the market')}<div class="label">Net EQTY \u0394</div><div class="value">${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()}</div><div class="sub">${s.netEqtyChange>0?'\u2191 accumulating':s.netEqtyChange<0?'\u2193 distributing':'= neutral'}</div></div>
       </div>
       <div class="pnl-chart-wrap">
-        <div class="pnl-chart-label">&#128200; Cumulative Net P&L</div>
+        <div class="pnl-chart-label">&#128200; Cumulative Mark-to-Market P&L</div>
         <canvas id="${id}-chart" height="160"></canvas>
       </div>`;
     }
-
-    // ── P&L CHART ────────────────────────────────────────────────────────────
+    // ── P&L CHART — mark-to-market ───────────────────────────────────────────
+    // FIX: previous version used raw cash flow which caused $70-$90 spikes.
+    // Correct approach: cash + inventory * current_price → always starts at 0,
+    // stays in tight range, ends exactly at Net P&L.
     function renderPnlChart(canvasId, trades) {
-      if(typeof Chart==='undefined') return;
+      if(typeof Chart==='undefined')return;
       const canvas=document.getElementById(canvasId);
       if(!canvas)return;
       const existing=Chart.getChart(canvas);
@@ -1232,46 +1228,50 @@ async function loadGateioBalance() {
       if(!trades.length){canvas.style.display='none';return;}
       canvas.style.display='';
       const sorted=trades.slice().sort((a,b)=>(a.trade_timestamp||a.timestamp||0)-(b.trade_timestamp||b.timestamp||0));
-      let running=0;
+      let cash=0,inventory=0;
       const labels=[],data=[],zeros=[];
       for(const t of sorted){
         const p=parseFloat(t.price)||0,q=parseFloat(String(t.quantity??'').replace(/\.$/,''))||0;
-        const f=parseFloat(t.raw_json?.trade_fee?.percent??'0.003'),n=p*q;
-        running+=(t.trade_type||'').toUpperCase()==='BUY'?-(n+n*f):(n-n*f);
+        const f=parseFloat(t.raw_json?.trade_fee?.percent??'0.003'),n=p*q,fee=n*f;
+        if((t.trade_type||'').toUpperCase()==='BUY'){cash-=(n+fee);inventory+=q;}
+        else{cash+=(n-fee);inventory-=q;}
+        // MTM P&L: net cash + remaining inventory valued at this trade's price
+        data.push(+(cash+inventory*p).toFixed(6));
+        zeros.push(0);
         const ts=(t.trade_timestamp||t.timestamp||0)*1000,d=new Date(ts);
         labels.push(d.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));
-        data.push(+running.toFixed(6));zeros.push(0);
       }
+      const minY=data.reduce((a,b)=>Math.min(a,b),0);
+      const maxY=data.reduce((a,b)=>Math.max(a,b),0);
+      const pad=Math.max(Math.abs(maxY-minY)*0.1,0.0001);
       const dark=document.documentElement.getAttribute('data-theme')==='dark';
-      const pos=running>=0,lc=pos?'#3fb950':'#f85149',fc=pos?'rgba(63,185,80,0.12)':'rgba(248,81,73,0.12)';
+      const finalPnl=data[data.length-1]??0,pos=finalPnl>=0;
+      const lc=pos?'#3fb950':'#f85149',fc=pos?'rgba(63,185,80,0.12)':'rgba(248,81,73,0.12)';
       const gc=dark?'#30363d':'#e5e7eb',tc=dark?'#8b949e':'#9ca3af';
       new Chart(canvas,{
         type:'line',
         data:{labels,datasets:[
-          {label:'Net P&L',data,borderColor:lc,backgroundColor:fc,borderWidth:2,fill:true,tension:0.35,pointRadius:0,pointHoverRadius:4},
-          {data:zeros,borderColor:dark?'#30363d':'#d1d5db',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false}
+          {label:'P&L',data,borderColor:lc,backgroundColor:fc,borderWidth:2,fill:true,tension:0.3,pointRadius:0,pointHoverRadius:4},
+          {data:zeros,borderColor:dark?'#484f58':'#d1d5db',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,label:''}
         ]},
         options:{
           responsive:true,maintainAspectRatio:false,
           interaction:{intersect:false,mode:'index'},
           plugins:{
             legend:{display:false},
-            tooltip:{
-              filter:item=>item.datasetIndex===0,
-              callbacks:{
-                title:ctx=>labels[ctx[0].dataIndex],
-                label:ctx=>`Net P&L: ${ctx.parsed.y>=0?'+':''}$${ctx.parsed.y.toFixed(4)}`
-              }
-            }
+            tooltip:{filter:item=>item.datasetIndex===0,callbacks:{
+              title:ctx=>labels[ctx[0].dataIndex],
+              label:ctx=>`P&L: ${ctx.parsed.y>=0?'+':''}$${ctx.parsed.y.toFixed(4)}`
+            }}
           },
           scales:{
             x:{grid:{color:gc},ticks:{color:tc,maxTicksLimit:6,maxRotation:0}},
-            y:{grid:{color:gc},ticks:{color:tc,callback:v=>`$${v.toFixed(4)}`}}
+            y:{min:minY-pad,max:maxY+pad,grid:{color:gc},
+               ticks:{color:tc,callback:v=>`$${v.toFixed(4)}`}}
           }
         }
       });
     }
-
     // ── DATA LOADERS ─────────────────────────────────────────────────────────
     async function loadKucoinData(days=1){
       document.querySelectorAll('#kucoin-days-selector .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
