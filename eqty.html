@@ -214,16 +214,28 @@
     .pnl-stat.positive{border-color:#86efac;background:#f0fdf4;} .pnl-stat.positive .value{color:#15803d;}
     .pnl-stat.negative{border-color:#fca5a5;background:#fef2f2;} .pnl-stat.negative .value{color:#dc2626;}
     .pnl-stat.neutral .value{color:#1e40af;} .pnl-stat.highlight{border-width:2px;}
-    .stat-help{position:absolute;top:5px;right:7px;width:14px;height:14px;border-radius:50%;background:#d1d5db;color:#6b7280;font-size:9px;font-weight:700;line-height:14px;text-align:center;cursor:default;user-select:none;}
-    .stat-help:hover .stat-tip{display:block;}
-    .stat-tip{display:none;position:absolute;bottom:120%;right:0;background:#1f2937;color:#f9fafb;font-size:11px;font-weight:400;line-height:1.5;padding:7px 10px;border-radius:6px;width:190px;text-align:left;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,0.35);white-space:normal;pointer-events:none;}
+    /* Tooltip — works on both hover (desktop) and tap (mobile) */
+    .stat-help{position:absolute;top:5px;right:7px;width:20px;height:20px;border-radius:50%;background:#d1d5db;color:#6b7280;font-size:11px;font-weight:700;line-height:20px;text-align:center;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+    .stat-help:hover .stat-tip,.stat-help.open .stat-tip{display:block;}
+    .stat-tip{display:none;position:absolute;bottom:130%;right:0;background:#1f2937;color:#f9fafb;font-size:11px;font-weight:400;line-height:1.5;padding:8px 11px;border-radius:6px;width:200px;text-align:left;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,0.4);white-space:normal;pointer-events:none;}
     [data-theme="dark"] .stat-help{background:#30363d;color:#8b949e;}
     [data-theme="dark"] .stat-tip{background:#e6edf3;color:#1f2937;}
     .hm-wrap{overflow-x:auto;padding-bottom:4px;}
     .hm-row{display:flex;align-items:center;margin-bottom:2px;}
     .hm-label{width:46px;font-size:10px;color:#8b949e;text-align:right;padding-right:6px;flex-shrink:0;white-space:nowrap;}
     .hm-cell{border-radius:3px;cursor:default;transition:opacity .1s;flex-shrink:0;}
-    .hm-cell:hover{opacity:.75;outline:1px solid rgba(255,255,255,.35);}
+    .hm-cell.has-trades{cursor:pointer;}
+    .hm-cell.has-trades:hover{opacity:.75;outline:2px solid rgba(255,255,255,.5);}
+    .hm-cell.selected{outline:2px solid #4f46e5!important;opacity:1!important;}
+    .hm-detail{margin-top:14px;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;}
+    .hm-detail-header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f3f4f6;font-size:13px;font-weight:600;}
+    .hm-detail-close{cursor:pointer;font-size:16px;line-height:1;padding:0 4px;opacity:.6;}
+    .hm-detail-close:hover{opacity:1;}
+    .hm-detail table{width:100%;border-collapse:collapse;font-size:12px;}
+    .hm-detail td{padding:5px 10px;border-bottom:1px solid #f3f4f6;}
+    [data-theme="dark"] .hm-detail{border-color:#30363d;}
+    [data-theme="dark"] .hm-detail-header{background:#21262d;color:#e6edf3;}
+    [data-theme="dark"] .hm-detail td{border-bottom-color:#21262d;color:#e6edf3;}
     .activity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;}
     .days-selector{display:inline-flex;gap:5px;float:right;}
     .days-btn{padding:3px 12px;border-radius:999px;border:1px solid #d1d5db;background:white;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;}
@@ -406,8 +418,7 @@
         const isRunning = data===true||data==='true'||(typeof data==='object'&&(data.running||data.status==='running'));
         const dc=document.getElementById('chip-docker'),kc=document.getElementById('chip-kucoin'),gc=document.getElementById('chip-gateio');
         if(dc){dc.className=`uptime-chip ${isRunning?'good':'down'}`;dc.innerHTML=`${isRunning?'&#9679;':'&#9675;'} <strong>${isRunning?'Running':'Stopped'}</strong>`;dc.style.visibility='visible';}
-        if(kc)kc.style.visibility='hidden';
-        if(gc)gc.style.visibility='hidden';
+        if(kc)kc.style.visibility='hidden';if(gc)gc.style.visibility='hidden';
         dockerInfo.innerHTML=`<pre>${JSON.stringify(data,null,2)}</pre>`;
       } catch(error) {
         const dc=document.getElementById('chip-docker');
@@ -1161,17 +1172,13 @@ async function loadGateioBalance() {
       const tot=(Date.now()-cfg.start.getTime())/1000,dn=parseInt(localStorage.getItem(_dk(ex))||'0'),up=Math.max(0,tot-dn);
       return{d:Math.floor(up/86400),h:Math.floor((up%86400)/3600),m:Math.floor((up%3600)/60),pct:(up/tot)*100};
     }
-    // ── CHIPS — each aligned under its own tab button ────────────────────────
     function _hideAll(){['chip-docker','chip-kucoin','chip-gateio'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.visibility='hidden';});}
     function renderUptimeBar(ex,running){
       _hideAll();
-      const s=getUptimeStats(ex);
-      const rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
-      const label=ex==='kucoin'?'KuCoin':'Gate.io';
-      const chip=document.getElementById(ex==='kucoin'?'chip-kucoin':'chip-gateio');
-      if(!chip)return;
+      const s=getUptimeStats(ex),rc=running?'good':'down',ri=running?'&#9679;':'&#9675;',rl=running?'Running':'Stopped';
+      const chip=document.getElementById(ex==='kucoin'?'chip-kucoin':'chip-gateio');if(!chip)return;
       chip.className=`uptime-chip ${rc}`;
-      let html=`${ri} <strong>${label} ${rl}</strong>`;
+      let html=`${ri} <strong>${ex==='kucoin'?'KuCoin':'Gate.io'} ${rl}</strong>`;
       if(s)html+=`&nbsp;&nbsp;&#9201;&nbsp;<span id="uptime-timer-${ex}">${s.d}d ${s.h}h</span>&nbsp;&nbsp;${s.pct.toFixed(1)}%`;
       chip.innerHTML=html;chip.style.visibility='visible';
     }
@@ -1196,6 +1203,8 @@ async function loadGateioBalance() {
       const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);
       const b=document.getElementById('theme-toggle');if(b)b.textContent=s==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';
     });
+    // Close any open stat-help tooltips when tapping elsewhere
+    document.addEventListener('click',()=>document.querySelectorAll('.stat-help.open').forEach(el=>el.classList.remove('open')));
     // ── P&L ──────────────────────────────────────────────────────────────────
     function computePnlStats(trades){
       let bv=0,bq=0,bc=0,sv=0,sq=0,sc=0,fees=0;
@@ -1219,7 +1228,8 @@ async function loadGateioBalance() {
       const cls=n=>n===null?'neutral':n>=0?'positive':'negative';
       const ic=s.netEqtyChange>0?'positive':s.netEqtyChange<0?'negative':'neutral';
       const sc2=s.spread>0?'positive':s.spread<0?'negative':'neutral';
-      const tip=t=>`<span class="stat-help">?<span class="stat-tip">${t}</span></span>`;
+      // FIX 1: tooltip tappable on mobile — onclick toggles .open class
+      const tip=t=>`<span class="stat-help" onclick="event.stopPropagation();this.classList.toggle('open')">?<span class="stat-tip">${t}</span></span>`;
       el.innerHTML=`<div class="pnl-grid">
         <div class="pnl-stat neutral">${tip('Number of executed trades (B\u202f=\u202fbuys, S\u202f=\u202fsells)')}<div class="label">Trades</div><div class="value">${s.tradeCount}</div><div class="sub">${s.buyCount}B / ${s.sellCount}S</div></div>
         <div class="pnl-stat neutral">${tip('Total notional value traded in USDT')}<div class="label">Volume</div><div class="value">$${s.totalVolume.toFixed(2)}</div><div class="sub">notional USDT</div></div>
@@ -1235,10 +1245,7 @@ async function loadGateioBalance() {
         <div class="pnl-stat ${ic}">${tip('Net EQTY change: positive = accumulating')}<div class="label">Net EQTY \u0394</div><div class="value">${s.netEqtyChange>=0?'+':''}${Math.round(s.netEqtyChange).toLocaleString()}</div><div class="sub">${s.netEqtyChange>0?'\u2191 accumulating':s.netEqtyChange<0?'\u2193 distributing':'= neutral'}</div></div>
       </div>`;
     }
-    // ── HEATMAP — uses LOCAL calendar days (midnight→midnight) ───────────────
-    // Fixes: rolling 24h windows caused trades near midnight to land on wrong day
-    // e.g. a trade at 22:00 UTC on Feb 20 (= 23:00 CET) happened only 19h ago,
-    // so the old code put it on "Feb 21" and showed "Feb 21 23:00" — a future time.
+    // ── HEATMAP — FIX 2: click cell to see trades ────────────────────────────
     function heatColor(t){
       if(t<=0)return'#161b22';
       const C=[[13,40,24],[26,71,49],[35,134,54],[63,185,80],[126,231,135]];
@@ -1248,28 +1255,26 @@ async function loadGateioBalance() {
     function renderHeatmap(containerId,trades,days){
       const el=document.getElementById(containerId);if(!el)return;
       if(!trades.length){el.innerHTML='<div class="loading">No trades in this period.</div>';return;}
-      // Build LOCAL calendar day buckets (midnight → midnight in browser timezone)
+      // Store raw trades for cell-click drill-down
+      window._hmTrades=window._hmTrades||{};
+      window._hmTrades[containerId]=trades;
+      // Build LOCAL calendar day buckets (midnight→midnight in browser timezone)
       const dayMap={},dayLabels=[],matrix=[];
       for(let d=0;d<days;d++){
-        const dt=new Date();
-        dt.setHours(0,0,0,0);           // local midnight today
-        dt.setDate(dt.getDate()-(days-1-d)); // go back N days
+        const dt=new Date();dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-(days-1-d));
         const key=`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-        dayMap[key]=d;
-        dayLabels.push(dt.toLocaleDateString([],{month:'short',day:'numeric'}));
+        dayMap[key]=d;dayLabels.push(dt.toLocaleDateString([],{month:'short',day:'numeric'}));
         matrix.push(new Array(24).fill(0));
       }
-      // Assign each trade to its LOCAL calendar day and LOCAL hour
       for(const t of trades){
-        const tsRaw=t.trade_timestamp||t.timestamp||0;
-        const tsSec=tsRaw>1e10?tsRaw/1000:tsRaw; // ms → s if needed
-        const d=new Date(tsSec*1000);             // local Date object
-        const key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        const dayIdx=dayMap[key];
-        if(dayIdx!==undefined)matrix[dayIdx][d.getHours()]++;
+        const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const d=new Date(tsSec*1000),key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        const dayIdx=dayMap[key];if(dayIdx!==undefined)matrix[dayIdx][d.getHours()]++;
       }
       const maxVal=Math.max(1,...matrix.flat());
       const cw=days<=7?30:days<=14?26:22,ch=days<=7?28:days<=14?20:15;
+      // Store dayMap keys in order for the click handler
+      const dayKeys=Object.keys(dayMap).sort((a,b)=>dayMap[a]-dayMap[b]);
       let html=`<div class="hm-wrap"><div style="display:inline-block;">`;
       html+=`<div class="hm-row"><div class="hm-label"></div>`;
       for(let h=0;h<24;h++)html+=`<div style="width:${cw}px;text-align:center;font-size:9px;color:#6e7681;flex-shrink:0;">${h%3===0?h+'h':''}</div>`;
@@ -1278,16 +1283,44 @@ async function loadGateioBalance() {
         html+=`<div class="hm-row"><div class="hm-label">${dayLabels[d]}</div>`;
         for(let h=0;h<24;h++){
           const v=matrix[d][h],t2=v/maxVal;
-          html+=`<div class="hm-cell" style="width:${cw-2}px;height:${ch}px;margin-right:2px;background:${heatColor(t2)};" title="${dayLabels[d]} ${h}:00\u202f\u2014\u202f${v} trade${v!==1?'s':''}"></div>`;
+          const clickable=v>0;
+          const onclick=clickable?` onclick="hmCellClick('${containerId}','${dayKeys[d]}',${h},this)"` :'';
+          html+=`<div class="hm-cell${clickable?' has-trades':''}" style="width:${cw-2}px;height:${ch}px;margin-right:2px;background:${heatColor(t2)};"${onclick} title="${dayLabels[d]} ${h}:00\u202f\u2014\u202f${v} trade${v!==1?'s':''}"></div>`;
         }
         html+=`</div>`;
       }
       html+=`<div style="margin-left:48px;margin-top:10px;display:flex;align-items:center;gap:5px;">`;
       html+=`<span style="font-size:10px;color:#6e7681;">0</span>`;
       for(let i=0;i<=8;i++)html+=`<div style="width:14px;height:10px;border-radius:2px;background:${heatColor(i/8)};"></div>`;
-      html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr)</span></div>`;
+      html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div>`;
       html+=`</div></div>`;
       el.innerHTML=html;
+    }
+    function hmCellClick(cid,dayKey,hour,cellEl){
+      // Deselect previously selected cell
+      document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
+      const detailEl=document.getElementById(cid+'-detail');if(!detailEl)return;
+      // If same cell clicked again → close panel
+      if(cellEl.dataset.open==='1'){cellEl.dataset.open='';detailEl.innerHTML='';return;}
+      cellEl.classList.add('selected');cellEl.dataset.open='1';
+      const trades=(window._hmTrades?.[cid]||[]).filter(t=>{
+        const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const d=new Date(tsSec*1000);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`===dayKey&&d.getHours()===hour;
+      }).sort((a,b)=>(a.trade_timestamp||0)-(b.trade_timestamp||0));
+      if(!trades.length){detailEl.innerHTML='';return;}
+      const dayLabel=new Date(trades[0].trade_timestamp>1e10?trades[0].trade_timestamp:trades[0].trade_timestamp*1000).toLocaleDateString([],{month:'short',day:'numeric'});
+      let rows='';
+      for(const t of trades){
+        const tsRaw=t.trade_timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const time=new Date(tsSec*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const qty=parseFloat(String(t.quantity||'0').replace(/\.$/,''));
+        const price=parseFloat(t.price||0);
+        const val=(qty*price).toFixed(4);
+        const isBuy=(t.trade_type||'').toUpperCase()==='BUY';
+        rows+=`<tr><td>${time}</td><td><span class="pill-${isBuy?'buy':'sell'}" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;">${isBuy?'BUY':'SELL'}</span></td><td>${price}</td><td>${Math.round(qty).toLocaleString()}</td><td>$${val}</td></tr>`;
+      }
+      detailEl.innerHTML=`<div class="hm-detail"><div class="hm-detail-header"><span>&#128336; ${dayLabel} &nbsp;${hour}:00\u202f\u2014\u202f${(hour+1)%24}:00 &nbsp;&middot;&nbsp; ${trades.length} trade${trades.length>1?'s':''}</span><span class="hm-detail-close" onclick="document.getElementById('${cid}-detail').innerHTML='';document.querySelectorAll('#${cid} .hm-cell.selected').forEach(e=>{e.classList.remove('selected');e.dataset.open='';})">&#x2715;</span></div><div style="overflow-x:auto;"><table><thead><tr><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Time</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Side</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Price</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Qty (EQTY)</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Value</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }
     // ── DATA LOADERS ─────────────────────────────────────────────────────────
     async function loadKucoinData(days=1){
@@ -1318,8 +1351,8 @@ async function loadGateioBalance() {
     }
     async function loadActivityKucoin(days=14){
       document.querySelectorAll('#activity-kucoin-days .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-      const el=document.getElementById('activity-kucoin');
-      el.classList.add('loading');el.textContent='Loading heatmap...';
+      const el=document.getElementById('activity-kucoin'),det=document.getElementById('activity-kucoin-detail');
+      el.classList.add('loading');el.textContent='Loading heatmap...';if(det)det.innerHTML='';
       try{
         const data=await fetchWithAuth(`/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=${days}&verbose=false&timeout=30`);
         const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
@@ -1328,8 +1361,8 @@ async function loadGateioBalance() {
     }
     async function loadActivityGateio(days=14){
       document.querySelectorAll('#activity-gateio-days .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-      const el=document.getElementById('activity-gateio');
-      el.classList.add('loading');el.textContent='Loading heatmap...';
+      const el=document.getElementById('activity-gateio'),det=document.getElementById('activity-gateio-detail');
+      el.classList.add('loading');el.textContent='Loading heatmap...';if(det)det.innerHTML='';
       try{
         const data=await fetchWithAuth(`/bot-orchestration/da6132e324292f6f7b914b58333808506f741db0/history?days=${days}&verbose=false&timeout=30`);
         const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
@@ -1356,6 +1389,7 @@ async function loadGateioBalance() {
           </span>
         </h2>
         <div id="activity-kucoin" class="loading">Loading heatmap...</div>
+        <div id="activity-kucoin-detail"></div>
       </div>
       <div class="card">
         <h2>&#128200; Gate.io Activity
@@ -1366,6 +1400,7 @@ async function loadGateioBalance() {
           </span>
         </h2>
         <div id="activity-gateio" class="loading">Loading heatmap...</div>
+        <div id="activity-gateio-detail"></div>
       </div>
     </div>
   </div>
