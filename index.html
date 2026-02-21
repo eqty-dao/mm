@@ -239,16 +239,12 @@
       gap: 10px;
     }
     .pnl-stat {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px 10px;
-      text-align: center;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 8px; padding: 12px 10px; text-align: center;
     }
     .pnl-stat .label {
-      font-size: 11px; color: #9ca3af;
-      text-transform: uppercase; font-weight: 700;
-      letter-spacing: 0.05em; margin-bottom: 4px;
+      font-size: 11px; color: #9ca3af; text-transform: uppercase;
+      font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;
     }
     .pnl-stat .value { font-size: 16px; font-weight: 700; color: #111827; line-height: 1.2; }
     .pnl-stat .sub   { font-size: 11px; color: #9ca3af; margin-top: 3px; }
@@ -259,9 +255,7 @@
     .pnl-stat.neutral  .value { color: #1e40af; }
     .pnl-stat.highlight { border-width: 2px; }
     /* === Days Selector === */
-    .days-selector {
-      display: inline-flex; gap: 5px; float: right;
-    }
+    .days-selector { display: inline-flex; gap: 5px; float: right; }
     .days-btn {
       padding: 3px 12px; border-radius: 999px;
       border: 1px solid #d1d5db; background: white;
@@ -271,18 +265,15 @@
     .days-btn:hover { background: #f3f4f6; }
     .days-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
     /* === Uptime === */
-    .uptime-bar {
-      display: inline-flex; align-items: center; gap: 10px;
-      margin-top: 8px; flex-wrap: wrap;
-    }
+    .uptime-bar { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .uptime-chip {
       display: inline-flex; align-items: center; gap: 6px;
       background: #f3f4f6; border: 1px solid #e5e7eb;
       border-radius: 999px; padding: 4px 12px; font-size: 13px; color: #374151;
     }
-    .uptime-chip.good  { background: #f0fdf4; border-color: #86efac; color: #15803d; }
-    .uptime-chip.warn  { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
-    .uptime-chip.down  { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+    .uptime-chip.good { background: #f0fdf4; border-color: #86efac; color: #15803d; }
+    .uptime-chip.warn { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+    .uptime-chip.down { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
     .uptime-chip strong { font-weight: 700; }
   </style>
 </head>
@@ -308,7 +299,7 @@
     <section id="tab-docker" class="tab-content active">
   <div class="card">
     <div class="refresh-info">
-      Auto-refreshing every 120 seconds
+      Refreshes automatically when you click this tab
     </div>
   </div>
 
@@ -555,10 +546,15 @@ async function fetchMQTTStatus() {
   
   if (tabName === 'docker') {
     pageTitle.textContent = '🐳 Docker & Hummingbot Monitor';
-    // Refresh Docker status
-    checkDockerStatus();
-    
-  } else if (tabName === 'kucoin') {
+    // Hide uptime bar, restore status badge
+    const _ub = document.getElementById('uptime-bar');
+    const _sd = document.getElementById('docker-status');
+    if (_ub) _ub.style.display = 'none';
+    if (_sd) _sd.style.display = '';
+    // Refresh all Docker data on tab click
+    refreshAll();
+
+    } else if (tabName === 'kucoin') {
     pageTitle.textContent = '💹 KuCoin - EQTY MM stats';
     // Set checking status immediately
     statusDiv.innerHTML = '<span class="status-badge status-unknown">⏳ Checking...</span>';
@@ -1200,15 +1196,14 @@ async function loadGateioBalance() {
     // ======================================================================
     const UPTIME_CONFIG = {
       kucoin: { start: new Date('2026-02-01T00:00:00'), label: 'KuCoin' },
-      gateio: { start: null,                            label: 'Gate.io' }  // set when live
+      gateio: { start: null, label: 'Gate.io' }
     };
 
-    function _downtimeKey(exchange) { return `uptime_down_s_${exchange}`; }
+    function _downtimeKey(ex) { return `uptime_down_s_${ex}`; }
 
-    // Called on every metrics poll — accumulates downtime in localStorage
     function trackDowntime(exchange, isRunning) {
       if (!isRunning) {
-        const key = _downtimeKey(exchange);
+        const key  = _downtimeKey(exchange);
         const prev = parseInt(localStorage.getItem(key) || '0');
         localStorage.setItem(key, prev + Math.round(REFRESH_INTERVAL / 1000));
       }
@@ -1217,32 +1212,27 @@ async function loadGateioBalance() {
     function getUptimeStats(exchange) {
       const cfg = UPTIME_CONFIG[exchange];
       if (!cfg?.start) return null;
-      const totalSec  = (Date.now() - cfg.start.getTime()) / 1000;
-      const downSec   = parseInt(localStorage.getItem(_downtimeKey(exchange)) || '0');
-      const upSec     = Math.max(0, totalSec - downSec);
-      const pct       = (upSec / totalSec) * 100;
+      const totalSec = (Date.now() - cfg.start.getTime()) / 1000;
+      const downSec  = parseInt(localStorage.getItem(_downtimeKey(exchange)) || '0');
+      const upSec    = Math.max(0, totalSec - downSec);
       const d = Math.floor(upSec / 86400);
       const h = Math.floor((upSec % 86400) / 3600);
       const m = Math.floor((upSec % 3600) / 60);
-      return { d, h, m, pct, upSec, totalSec, downSec };
+      return { d, h, m, pct: (upSec / totalSec) * 100 };
     }
 
     function renderUptimeBar(exchange, isRunning) {
       const bar = document.getElementById('uptime-bar');
       if (!bar) return;
-
-      const stats = getUptimeStats(exchange);
-
-      // Running badge
-      const runBadge = isRunning
-        ? '<span class="status-badge status-running">&#10003; Running</span>'
-        : '<span class="status-badge status-stopped">&#10007; Stopped</span>';
+      const stats    = getUptimeStats(exchange);
+      const runClass = isRunning ? 'good' : 'down';
+      const runIcon  = isRunning ? '&#9679;' : '&#9675;';
+      const runLabel = isRunning ? 'Running' : 'Stopped';
 
       if (!stats) {
-        // Gate.io: no start date yet
         bar.style.display = 'flex';
         bar.innerHTML = `
-          <span class="uptime-chip">${runBadge}</span>
+          <span class="uptime-chip ${runClass}">${runIcon} <strong>${runLabel}</strong></span>
           <span class="uptime-chip" style="color:#9ca3af;">&#128338; Not started</span>`;
         return;
       }
@@ -1253,24 +1243,16 @@ async function loadGateioBalance() {
 
       bar.style.display = 'flex';
       bar.innerHTML = `
-        <span class="uptime-chip ${isRunning ? 'good' : 'down'}">
-          ${isRunning ? '&#9679;' : '&#9675;'}
-          <strong>${isRunning ? 'Running' : 'Stopped'}</strong>
-        </span>
-        <span class="uptime-chip">
-          &#9201; <strong id="uptime-timer-${exchange}">${timerStr}</strong>
-        </span>
-        <span class="uptime-chip ${pctClass}">
-          &#128200; <strong>${pctStr}</strong>&nbsp;uptime
-        </span>`;
+        <span class="uptime-chip ${runClass}">${runIcon} <strong>${runLabel}</strong></span>
+        <span class="uptime-chip">&#9201; <strong id="uptime-timer-${exchange}">${timerStr}</strong></span>
+        <span class="uptime-chip ${pctClass}">&#128200; <strong>${pctStr}</strong>&nbsp;uptime</span>`;
     }
 
-    // Tick the timer every minute without a re-fetch
     function startUptimeTick(exchange) {
-      if (window[`_uptimeTick_${exchange}`]) return; // already ticking
+      if (window[`_uptimeTick_${exchange}`]) return;
       window[`_uptimeTick_${exchange}`] = setInterval(() => {
         const stats = getUptimeStats(exchange);
-        const el = document.getElementById(`uptime-timer-${exchange}`);
+        const el    = document.getElementById(`uptime-timer-${exchange}`);
         if (stats && el) el.textContent = `${stats.d}d ${stats.h}h ${stats.m}m`;
       }, 60_000);
     }
@@ -1282,7 +1264,6 @@ async function loadGateioBalance() {
       let buyVolume = 0, buyQty = 0, buyCount = 0;
       let sellVolume = 0, sellQty = 0, sellCount = 0;
       let totalFees = 0;
-
       for (const t of trades) {
         const price    = parseFloat(t.price) || 0;
         const qty      = parseFloat(String(t.quantity ?? '').replace(/\.$/, '')) || 0;
@@ -1295,43 +1276,35 @@ async function loadGateioBalance() {
           sellVolume += notional; sellQty += qty; sellCount++;
         }
       }
-
       return {
         buyVolume, buyQty, buyCount,
         sellVolume, sellQty, sellCount,
         totalFees,
-        tradePnl:      sellVolume - buyVolume,
-        netPnl:        sellVolume - buyVolume - totalFees,
-        totalVolume:   buyVolume + sellVolume,
-        totalEqtyVol:  buyQty + sellQty,
-        avgBuyPrice:   buyQty  > 0 ? buyVolume  / buyQty  : 0,
-        avgSellPrice:  sellQty > 0 ? sellVolume / sellQty : 0,
-        netEqtyChange: buyQty  - sellQty,
-        tradeCount:    trades.length
+        tradePnl:     sellVolume - buyVolume,
+        netPnl:       sellVolume - buyVolume - totalFees,
+        totalVolume:  buyVolume + sellVolume,
+        totalEqtyVol: buyQty + sellQty,
+        avgBuyPrice:  buyQty  > 0 ? buyVolume  / buyQty  : 0,
+        avgSellPrice: sellQty > 0 ? sellVolume / sellQty : 0,
+        netEqtyChange: buyQty - sellQty,
+        tradeCount:   trades.length
       };
     }
 
     function renderPnlStats(containerId, stats, totalPortfolioValue, midPrice) {
       const el = document.getElementById(containerId);
       if (!el) return;
-
       const returnPct = totalPortfolioValue > 0 ? (stats.netPnl / totalPortfolioValue) * 100 : null;
       const truePnl   = midPrice > 0 ? stats.netPnl + (stats.netEqtyChange * midPrice) : null;
-      const trueRetPct= (truePnl !== null && totalPortfolioValue > 0)
-                          ? (truePnl / totalPortfolioValue) * 100 : null;
-
-      const fmt = (n, d = 4) => {
-        if (n === null || n === undefined) return '\u2014';
-        return (n >= 0 ? `+$${Math.abs(n).toFixed(d)}` : `-$${Math.abs(n).toFixed(d)}`);
-      };
+      const fmt = (n, d = 4) => n === null ? '\u2014' :
+        (n >= 0 ? `+$${Math.abs(n).toFixed(d)}` : `-$${Math.abs(n).toFixed(d)}`);
       const fmtPct = n => n === null ? '\u2014' : `${n >= 0 ? '+' : ''}${n.toFixed(3)}%`;
       const cls    = n => n === null ? 'neutral' : n >= 0 ? 'positive' : 'negative';
       const invCls = stats.netEqtyChange > 0 ? 'positive' : stats.netEqtyChange < 0 ? 'negative' : 'neutral';
       const retSub = totalPortfolioValue > 0 ? `on $${totalPortfolioValue.toFixed(0)}` : 'load balance first';
-      const trueSub= midPrice > 0
-        ? `cash ${stats.netEqtyChange > 0 ? '+' : ''}${Math.round(stats.netEqtyChange).toLocaleString()} EQTY @ ${midPrice.toFixed(6)}`
+      const trueSub = midPrice > 0
+        ? `cash ${stats.netEqtyChange >= 0 ? '+' : ''}${Math.round(stats.netEqtyChange).toLocaleString()} EQTY @ ${midPrice.toFixed(6)}`
         : 'load bot status first';
-
       el.innerHTML = `
         <div class="pnl-grid">
           <div class="pnl-stat neutral">
@@ -1386,7 +1359,7 @@ async function loadGateioBalance() {
           </div>
           <div class="pnl-stat ${invCls}">
             <div class="label">Net EQTY \u0394</div>
-            <div class="value">${stats.netEqtyChange > 0 ? '+' : ''}${Math.round(stats.netEqtyChange).toLocaleString()}</div>
+            <div class="value">${stats.netEqtyChange >= 0 ? '+' : ''}${Math.round(stats.netEqtyChange).toLocaleString()}</div>
             <div class="sub">${stats.netEqtyChange > 0 ? '\u2191 accumulating' : stats.netEqtyChange < 0 ? '\u2193 distributing' : '= neutral'}</div>
           </div>
         </div>`;
@@ -1402,7 +1375,6 @@ async function loadGateioBalance() {
       el.classList.remove('error'); el.classList.add('loading');
       el.textContent = 'Loading KuCoin data...';
       if (pnlEl) { pnlEl.classList.add('loading'); pnlEl.textContent = 'Computing P&L...'; }
-
       try {
         const data = await fetchWithAuth(
           `/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=${days}&verbose=false&timeout=30`
@@ -1414,13 +1386,14 @@ async function loadGateioBalance() {
           (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
         );
         const stats = computePnlStats(trades);
-        const pv    = window.kucoinPortfolioValue || window.eqtyBotMetrics?.total_value_usdt || 0;
-        const mp    = window.eqtyBotMetrics?.mid_price || 0;
-        renderPnlStats('kucoin-pnl', stats, pv, mp);
+        renderPnlStats('kucoin-pnl', stats,
+          window.kucoinPortfolioValue || window.eqtyBotMetrics?.total_value_usdt || 0,
+          window.eqtyBotMetrics?.mid_price || 0
+        );
         renderTradesTable('kucoin-content', trades);
       } catch (error) {
         el.classList.remove('loading');
-        el.innerHTML = `<div class="error">Error loading KuCoin data: ${error.message}</div>`;
+        el.innerHTML = `<div class="error">Error: ${error.message}</div>`;
         if (pnlEl) { pnlEl.classList.remove('loading'); pnlEl.innerHTML = `<div class="error">P&L error: ${error.message}</div>`; }
       }
     }
@@ -1435,7 +1408,6 @@ async function loadGateioBalance() {
       el.classList.remove('error'); el.classList.add('loading');
       el.textContent = 'Loading Gate.io data...';
       if (pnlEl) { pnlEl.classList.add('loading'); pnlEl.textContent = 'Computing P&L...'; }
-
       try {
         const data = await fetchWithAuth(
           `/bot-orchestration/da6132e324292f6f7b914b58333808506f741db0/history?days=${days}&verbose=false&timeout=30`
@@ -1447,13 +1419,14 @@ async function loadGateioBalance() {
           (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
         );
         const stats = computePnlStats(trades);
-        const pv    = window.gateioPortfolioValue || window.gateioMetrics?.total_value_usdt || 0;
-        const mp    = window.gateioMetrics?.mid_price || 0;
-        renderPnlStats('gateio-pnl', stats, pv, mp);
+        renderPnlStats('gateio-pnl', stats,
+          window.gateioPortfolioValue || window.gateioMetrics?.total_value_usdt || 0,
+          window.gateioMetrics?.mid_price || 0
+        );
         renderTradesTable('gateio-content', trades);
       } catch (error) {
         el.classList.remove('loading');
-        el.innerHTML = `<div class="error">Error loading Gate.io data: ${error.message}</div>`;
+        el.innerHTML = `<div class="error">Error: ${error.message}</div>`;
         if (pnlEl) { pnlEl.classList.remove('loading'); pnlEl.innerHTML = `<div class="error">P&L error: ${error.message}</div>`; }
       }
     }
@@ -1462,10 +1435,10 @@ async function loadGateioBalance() {
 
 
     // -------- Initial load --------
-    refreshAll();
-    setInterval(refreshAll, REFRESH_INTERVAL);
-    // Load bot status on page load
+    refreshAll();  // Docker tab loaded on page open
+    // Poll bot running status every 120s for uptime tracking (no DOM refresh)
     fetchBotRunningStatus();
+    setInterval(fetchBotRunningStatus, REFRESH_INTERVAL);
   </script>
 </body>
 </html>
