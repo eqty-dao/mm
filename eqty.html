@@ -214,14 +214,14 @@
     .pnl-stat.positive{border-color:#86efac;background:#f0fdf4;} .pnl-stat.positive .value{color:#15803d;}
     .pnl-stat.negative{border-color:#fca5a5;background:#fef2f2;} .pnl-stat.negative .value{color:#dc2626;}
     .pnl-stat.neutral .value{color:#1e40af;} .pnl-stat.highlight{border-width:2px;}
-    .stat-help{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;cursor:pointer;color:#6b7280;border:1px solid #6b7280;vertical-align:middle;margin-left:3px;position:relative;user-select:none;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:color 0.15s,border-color 0.15s;}
-    .stat-help::before{content:'';position:absolute;top:-12px;bottom:-12px;left:-12px;right:-12px;}
-    .stat-help:hover{color:#4f46e5;border-color:#4f46e5;}
+    .stat-help{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;cursor:pointer;color:#9ca3af;vertical-align:middle;margin-left:2px;position:relative;user-select:none;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:color 0.15s;}
+    .stat-help::before{content:'';position:absolute;top:-8px;bottom:-8px;left:-8px;right:-8px;}
+    .stat-help:hover{color:#4f46e5;}
     .stat-help:hover .stat-tip,.stat-help.open .stat-tip{display:block;}
     .stat-tip{display:none;position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:#1f2937;color:#f9fafb;font-size:11px;font-weight:400;line-height:1.5;padding:8px 11px;border-radius:6px;width:200px;max-width:min(200px,80vw);text-align:left;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,0.4);white-space:normal;pointer-events:none;}
     .stat-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1f2937;}
-    [data-theme="dark"] .stat-help{color:#6e7681;border-color:#6e7681;}
-    [data-theme="dark"] .stat-help:hover{color:#79c0ff;border-color:#79c0ff;}
+    [data-theme="dark"] .stat-help{color:#6e7681;}
+    [data-theme="dark"] .stat-help:hover{color:#79c0ff;}
     [data-theme="dark"] .stat-tip{background:#161b22;color:#e6edf3;}
     [data-theme="dark"] .stat-tip::after{border-top-color:#161b22;}
     .uptime-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-radius:8px;margin-bottom:16px;border:1px solid #e5e7eb;background:#f9fafb;font-size:13px;}
@@ -1240,14 +1240,14 @@ async function loadGateioBalance() {
       const cls=n=>n===null?'neutral':n>=0?'positive':'negative';
       const ic=s.netEqtyChange>0?'positive':s.netEqtyChange<0?'negative':'neutral';
       const sc2=s.spread>0?'positive':s.spread<0?'negative':'neutral';
-      const tip=t=>`<span class="stat-help" onclick="event.stopPropagation();this.classList.toggle('open')"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="display:block;pointer-events:none" aria-hidden="true"><circle cx="4.5" cy="4.5" r="4" stroke="currentColor" stroke-width="1"/><rect x="4" y="4" width="1" height="3" rx="0.5" fill="currentColor"/><rect x="4" y="2" width="1" height="1.2" rx="0.5" fill="currentColor"/></svg><span class="stat-tip">${t}</span></span>`;
+      const tip=t=>`<span class="stat-help" onclick="event.stopPropagation();this.classList.toggle('open')"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="display:block;pointer-events:none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="5" stroke="currentColor" stroke-width="1"/><rect x="5" y="5" width="1" height="3.2" rx="0.5" fill="currentColor"/><rect x="5" y="2.5" width="1" height="1.3" rx="0.5" fill="currentColor"/></svg><span class="stat-tip">${t}</span></span>`;
       el.innerHTML=`<div class="pnl-grid">
         <div class="pnl-stat neutral"><div class="label">Trades ${tip('Number of executed trades (B\u202f=\u202fbuys, S\u202f=\u202fsells)')}</div><div class="value">${s.tradeCount}</div><div class="sub">${s.buyCount}B / ${s.sellCount}S</div></div>
         <div class="pnl-stat neutral"><div class="label">Volume ${tip('Total notional value traded in USDT')}</div><div class="value">$${s.totalVolume.toFixed(2)}</div><div class="sub">notional USDT</div></div>
         <div class="pnl-stat neutral"><div class="label">EQTY Vol ${tip('Total EQTY tokens moved')}</div><div class="value">${Math.round(s.totalEqtyVol).toLocaleString()}</div><div class="sub">tokens moved</div></div>
         <div class="pnl-stat neutral"><div class="label">Avg Buy ${tip('Weighted avg price per EQTY across all buys')}</div><div class="value">${s.avgBuyPrice>0?s.avgBuyPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.buyQty).toLocaleString()} EQTY</div></div>
         <div class="pnl-stat neutral"><div class="label">Avg Sell ${tip('Weighted avg price per EQTY across all sells')}</div><div class="value">${s.avgSellPrice>0?s.avgSellPrice.toFixed(6):'\u2014'}</div><div class="sub">${Math.round(s.sellQty).toLocaleString()} EQTY</div></div>
-        <div class="pnl-stat ${sc2} highlight"><div class="label">Spread Cap ${tip('Avg Sell \u2212 Avg Buy \u2014 core MM metric')}</div><div class="value">${s.spread>=0?'+':''}${s.spread.toFixed(6)}</div><div class="sub">${s.spreadBps>=0?'+':''}${s.spreadBps.toFixed(1)} bps</div></div>
+        <div class="pnl-stat ${sc2} highlight"><div class="label">Spread Capture ${tip('Avg Sell \u2212 Avg Buy \u2014 core MM metric')}</div><div class="value">${s.spread>=0?'+':''}${s.spread.toFixed(6)}</div><div class="sub">${s.spreadBps>=0?'+':''}${s.spreadBps.toFixed(1)} bps</div></div>
         <div class="pnl-stat ${cls(s.tradePnl)}"><div class="label">Trade P&L ${tip('Sell revenue minus buy cost (pre-fee)')}</div><div class="value">${fmt(s.tradePnl)}</div><div class="sub">gross (pre-fee)</div></div>
         <div class="pnl-stat negative"><div class="label">Fees Paid ${tip('Total fees paid to the exchange')}</div><div class="value">-$${s.totalFees.toFixed(4)}</div><div class="sub">${s.totalVolume>0?(s.totalFees/s.totalVolume*100).toFixed(2):0}% effective</div></div>
         <div class="pnl-stat ${cls(s.netPnl)} highlight"><div class="label">Net P&L ${tip('Trade P&L after all fees')}</div><div class="value">${fmt(s.netPnl)}</div><div class="sub">after fees</div></div>
