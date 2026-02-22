@@ -931,7 +931,13 @@ function updateStatusBadge() {
   loadTradeData(1);
   updateTimestamp();
 }
-  window.addEventListener('DOMContentLoaded', init);
+  // Safe init: script is at bottom of <body> so DOM is already ready.
+  // Use readyState check as belt-and-suspenders.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 </script>
 </body>
