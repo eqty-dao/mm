@@ -108,7 +108,7 @@ async function getBtcMetrics(botId, connector, pair, accountName, portfolioKey, 
       active_orders_count: buyOrders + sellOrders,
       buy_orders_count:    buyOrders,
       sell_orders_count:   sellOrders,
-      bot_running:         (buyOrders + sellOrders > 0) ? 1 : 0,
+      bot_running:         recentlyActive,
       recently_active:     statusData?.data?.recently_active ? 1 : 0
     };
   } catch (error) {
