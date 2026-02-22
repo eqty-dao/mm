@@ -1,5 +1,6 @@
 // api/metrics_test.js
 // Standalone metrics endpoint for MM-Bot-Binance (BTC-USDT)
+// Account: cex_mm_binance, Connector: kucoin
 // Does NOT touch existing EQTY/KuCoin/GateIO logic
 
 export default async function handler(req, res) {
@@ -32,10 +33,10 @@ export default async function handler(req, res) {
   try {
     const binanceData = await getBtcMetrics(
       '843b015973491f3e50405a3e5993d3a2a30c207c',
-      'binance',
+      'kucoin',          // connector used by this bot
       'BTC-USDT',
-      'cex_mm_binance',
-      'binance',
+      'cex_mm_binance',  // account name as registered in Hummingbot
+      'kucoin',          // portfolioKey — matches connector
       auth
     );
 
@@ -111,7 +112,7 @@ async function getBtcMetrics(botId, connector, pair, accountName, portfolioKey, 
       recently_active:     statusData?.data?.recently_active ? 1 : 0
     };
   } catch (error) {
-    console.error(`Error fetching Binance BTC:`, error);
+    console.error(`Error fetching BTC metrics:`, error);
     return getErrorMetrics();
   }
 }
