@@ -296,23 +296,20 @@
   
     .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
     .tab{padding:6px 14px;border-radius:6px;border:1px solid #e5e7eb;background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:#6b7280;transition:all .15s;}
-    .tab:hover{background:#f3f4f6;}
-    .tab.active{background:#4f46e5;border-color:#4f46e5;color:#fff;}
+    .tab:hover{background:#f3f4f6;} .tab.active{background:#4f46e5;border-color:#4f46e5;color:#fff;}
     [data-theme="dark"] .tab{border-color:#30363d;color:#8b949e;}
     [data-theme="dark"] .tab:hover{background:#21262d;}
     [data-theme="dark"] .tab.active{background:#4f46e5;border-color:#4f46e5;color:#fff;}
-    .tab-content{display:none;}.tab-content.active{display:block;}
+    .tab-content{display:none;} .tab-content.active{display:block;}
     .hm-wrap{overflow-x:auto;padding-bottom:4px;}
     .hm-row{display:flex;align-items:center;margin-bottom:2px;}
     .hm-label{width:46px;font-size:10px;color:#8b949e;text-align:right;padding-right:6px;flex-shrink:0;white-space:nowrap;}
     .hm-cell{border-radius:3px;cursor:default;transition:opacity .1s;flex-shrink:0;}
-    .hm-cell.has-trades{cursor:pointer;}
-    .hm-cell.has-trades:hover{opacity:.75;outline:2px solid rgba(255,255,255,.5);}
+    .hm-cell.has-trades{cursor:pointer;} .hm-cell.has-trades:hover{opacity:.75;outline:2px solid rgba(255,255,255,.5);}
     .hm-cell.selected{outline:2px solid #4f46e5!important;opacity:1!important;}
     .hm-detail{margin-top:14px;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;}
     .hm-detail-header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f3f4f6;font-size:13px;font-weight:600;}
-    .hm-detail-close{cursor:pointer;font-size:16px;line-height:1;padding:0 4px;opacity:.6;}
-    .hm-detail-close:hover{opacity:1;}
+    .hm-detail-close{cursor:pointer;font-size:16px;line-height:1;padding:0 4px;opacity:.6;} .hm-detail-close:hover{opacity:1;}
     .hm-detail table{width:100%;border-collapse:collapse;font-size:12px;}
     .hm-detail td{padding:5px 10px;border-bottom:1px solid #f3f4f6;}
     [data-theme="dark"] .hm-detail{border-color:#30363d;}
@@ -385,9 +382,9 @@
     <div class="card">
       <h2>&#128200; BTC/USDT Activity &middot; KuCoin
         <span class="days-selector" id="activity-btc-days">
-          <button class="days-btn" data-days="7"  onclick="loadActivityBtc(7)">7D</button>
+          <button class="days-btn"        data-days="7"  onclick="loadActivityBtc(7)">7D</button>
           <button class="days-btn active" data-days="14" onclick="loadActivityBtc(14)">14D</button>
-          <button class="days-btn" data-days="30" onclick="loadActivityBtc(30)">30D</button>
+          <button class="days-btn"        data-days="30" onclick="loadActivityBtc(30)">30D</button>
         </span>
       </h2>
       <div id="activity-btc" class="loading">Loading heatmap...</div>
@@ -985,178 +982,103 @@ function updateStatusBadge() {
   updateTimestamp();
 }
 
-  // ── Heatmap ────────────────────────────────────────────────────────────
-function heatColor(t){
-    if(t<=0)return'#161b22';
-    const C=[[13,40,24],[26,71,49],[35,134,54],[63,185,80],[126,231,135]];
-    const i=t*(C.length-1),lo=Math.floor(i),hi=Math.min(Math.ceil(i),C.length-1),f=i-lo;
-    return`rgb(${Math.round(C[lo][0]+f*(C[hi][0]-C[lo][0]))},${Math.round(C[lo][1]+f*(C[hi][1]-C[lo][1]))},${Math.round(C[lo][2]+f*(C[hi][2]-C[lo][2]))})`;
-  }
-  function renderHeatmap(containerId,trades,days){
-    const el=document.getElementById(containerId);if(!el)return;
-    if(!trades.length){el.innerHTML='<div class="loading">No trades in this period.</div>';return;}
-    window._hmTrades=window._hmTrades||{};window._hmTrades[containerId]=trades;
-    const dayMap={},dayLabels=[],matrix=[];
-    for(let d=0;d<days;d++){
-      const dt=new Date();dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-(days-1-d));
-      const key=`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-      dayMap[key]=d;dayLabels.push(dt.toLocaleDateString([],{month:'short',day:'numeric'}));
-      matrix.push(new Array(24).fill(0));
+  // ── Heatmap core (from eqty) ─────────────────────────────────────────────
+
+    function heatColor(t){
+      if(t<=0)return'#161b22';
+      const C=[[13,40,24],[26,71,49],[35,134,54],[63,185,80],[126,231,135]];
+      const i=t*(C.length-1),lo=Math.floor(i),hi=Math.min(Math.ceil(i),C.length-1),f=i-lo;
+      return`rgb(${Math.round(C[lo][0]+f*(C[hi][0]-C[lo][0]))},${Math.round(C[lo][1]+f*(C[hi][1]-C[lo][1]))},${Math.round(C[lo][2]+f*(C[hi][2]-C[lo][2]))})`;
     }
-    for(const t of trades){
-      const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
-      const d=new Date(tsSec*1000),key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      const dayIdx=dayMap[key];if(dayIdx!==undefined)matrix[dayIdx][d.getHours()]++;
-    }
-    const maxVal=Math.max(1,...matrix.flat());
-    const cw=days<=7?30:days<=14?26:22,ch=days<=7?28:days<=14?20:15;
-    const dayKeys=Object.keys(dayMap).sort((a,b)=>dayMap[a]-dayMap[b]);
-    let html=`<div class="hm-wrap"><div style="display:inline-block;">`;
-    html+=`<div class="hm-row"><div class="hm-label"></div>`;
-    for(let h=0;h<24;h++)html+=`<div style="width:${cw}px;text-align:center;font-size:9px;color:#6e7681;flex-shrink:0;">${h%3===0?h+'h':''}</div>`;
-    html+=`</div>`;
-    for(let d=0;d<days;d++){
-      html+=`<div class="hm-row"><div class="hm-label">${dayLabels[d]}</div>`;
-      for(let h=0;h<24;h++){
-        const v=matrix[d][h],t2=v/maxVal,clickable=v>0;
-        const onclick=clickable?` onclick="hmCellClick('${containerId}','${dayKeys[d]}',${h},this)"` :'';
-        html+=`<div class="hm-cell${clickable?' has-trades':''}" style="width:${cw-2}px;height:${ch}px;margin-right:2px;background:${heatColor(t2)};"${onclick} title="${dayLabels[d]} ${h}:00\u202f\u2014\u202f${v} trade${v!==1?'s':''}"></div>`;
+    function renderHeatmap(containerId,trades,days){
+      const el=document.getElementById(containerId);if(!el)return;
+      if(!trades.length){el.innerHTML='<div class="loading">No trades in this period.</div>';return;}
+      window._hmTrades=window._hmTrades||{};window._hmTrades[containerId]=trades;
+      const dayMap={},dayLabels=[],matrix=[];
+      for(let d=0;d<days;d++){
+        const dt=new Date();dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-(days-1-d));
+        const key=`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+        dayMap[key]=d;dayLabels.push(dt.toLocaleDateString([],{month:'short',day:'numeric'}));
+        matrix.push(new Array(24).fill(0));
       }
+      for(const t of trades){
+        const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const d=new Date(tsSec*1000),key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        const dayIdx=dayMap[key];if(dayIdx!==undefined)matrix[dayIdx][d.getHours()]++;
+      }
+      const maxVal=Math.max(1,...matrix.flat());
+      const cw=days<=7?30:days<=14?26:22,ch=days<=7?28:days<=14?20:15;
+      const dayKeys=Object.keys(dayMap).sort((a,b)=>dayMap[a]-dayMap[b]);
+      let html=`<div class="hm-wrap"><div style="display:inline-block;">`;
+      html+=`<div class="hm-row"><div class="hm-label"></div>`;
+      for(let h=0;h<24;h++)html+=`<div style="width:${cw}px;text-align:center;font-size:9px;color:#6e7681;flex-shrink:0;">${h%3===0?h+'h':''}</div>`;
       html+=`</div>`;
+      for(let d=0;d<days;d++){
+        html+=`<div class="hm-row"><div class="hm-label">${dayLabels[d]}</div>`;
+        for(let h=0;h<24;h++){
+          const v=matrix[d][h],t2=v/maxVal,clickable=v>0;
+          const onclick=clickable?` onclick="hmCellClick('${containerId}','${dayKeys[d]}',${h},this)"` :'';
+          html+=`<div class="hm-cell${clickable?' has-trades':''}" style="width:${cw-2}px;height:${ch}px;margin-right:2px;background:${heatColor(t2)};"${onclick} title="${dayLabels[d]} ${h}:00\u202f\u2014\u202f${v} trade${v!==1?'s':''}"></div>`;
+        }
+        html+=`</div>`;
+      }
+      html+=`<div style="margin-left:48px;margin-top:10px;display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:#6e7681;">0</span>`;
+      for(let i=0;i<=8;i++)html+=`<div style="width:14px;height:10px;border-radius:2px;background:${heatColor(i/8)};"></div>`;
+      html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div></div></div>`;
+      el.innerHTML=html;
     }
-    html+=`<div style="margin-left:48px;margin-top:10px;display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:#6e7681;">0</span>`;
-    for(let i=0;i<=8;i++)html+=`<div style="width:14px;height:10px;border-radius:2px;background:${heatColor(i/8)};"></div>`;
-    html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div></div></div>`;
-    el.innerHTML=html;
-  }
-  function hmCellClick(cid,dayKey,hour,cellEl){
-    document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
-    const detailEl=document.getElementById(cid+'-detail');if(!detailEl)return;
-    if(cellEl.dataset.open==='1'){cellEl.dataset.open='';detailEl.innerHTML='';return;}
-    cellEl.classList.add('selected');cellEl.dataset.open='1';
-    const trades=(window._hmTrades?.[cid]||[]).filter(t=>{
-      const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
-      const d=new Date(tsSec*1000);
-      return`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`===dayKey&&d.getHours()===hour;
-    }).sort((a,b)=>(a.trade_timestamp||0)-(b.trade_timestamp||0));
-    if(!trades.length){detailEl.innerHTML='';return;}
-    const dayLabel=new Date(trades[0].trade_timestamp>1e10?trades[0].trade_timestamp:trades[0].trade_timestamp*1000).toLocaleDateString([],{month:'short',day:'numeric'});
-    let rows='';
-    for(const t of trades){
-      const tsRaw=t.trade_timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
-      const time=new Date(tsSec*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      const qty=parseFloat(String(t.quantity||'0').replace(/\.$/,''));
-      const price=parseFloat(t.price||0),val=(qty*price).toFixed(4);
-      const isBuy=(t.trade_type||'').toUpperCase()==='BUY';
-      rows+=`<tr><td>${time}</td><td><span class="pill-${isBuy?'buy':'sell'}" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;">${isBuy?'BUY':'SELL'}</span></td><td>${price}</td><td>${Math.round(qty).toLocaleString()}</td><td>$${val}</td></tr>`;
+    function hmCellClick(cid,dayKey,hour,cellEl){
+      document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
+      const detailEl=document.getElementById(cid+'-detail');if(!detailEl)return;
+      if(cellEl.dataset.open==='1'){cellEl.dataset.open='';detailEl.innerHTML='';return;}
+      cellEl.classList.add('selected');cellEl.dataset.open='1';
+      const trades=(window._hmTrades?.[cid]||[]).filter(t=>{
+        const tsRaw=t.trade_timestamp||t.timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const d=new Date(tsSec*1000);
+        return`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`===dayKey&&d.getHours()===hour;
+      }).sort((a,b)=>(a.trade_timestamp||0)-(b.trade_timestamp||0));
+      if(!trades.length){detailEl.innerHTML='';return;}
+      const dayLabel=new Date(trades[0].trade_timestamp>1e10?trades[0].trade_timestamp:trades[0].trade_timestamp*1000).toLocaleDateString([],{month:'short',day:'numeric'});
+      let rows='';
+      for(const t of trades){
+        const tsRaw=t.trade_timestamp||0,tsSec=tsRaw>1e10?tsRaw/1000:tsRaw;
+        const time=new Date(tsSec*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const qty=parseFloat(String(t.quantity||'0').replace(/\.$/,''));
+        const price=parseFloat(t.price||0),val=(qty*price).toFixed(4);
+        const isBuy=(t.trade_type||'').toUpperCase()==='BUY';
+        rows+=`<tr><td>${time}</td><td><span class="pill-${isBuy?'buy':'sell'}" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;">${isBuy?'BUY':'SELL'}</span></td><td>${price}</td><td>${Math.round(qty).toLocaleString()}</td><td>$${val}</td></tr>`;
+      }
+      detailEl.innerHTML=`<div class="hm-detail"><div class="hm-detail-header"><span>&#128336; ${dayLabel} &nbsp;${hour}:00\u202f\u2014\u202f${(hour+1)%24}:00 &nbsp;&middot;&nbsp; ${trades.length} trade${trades.length>1?'s':''}</span><span class="hm-detail-close" onclick="document.getElementById('${cid}-detail').innerHTML='';document.querySelectorAll('#${cid} .hm-cell.selected').forEach(e=>{e.classList.remove('selected');e.dataset.open='';})">&#x2715;</span></div><div style="overflow-x:auto;"><table><thead><tr><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Time</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Side</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Price</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Qty</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Value</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }
-    detailEl.innerHTML=`<div class="hm-detail"><div class="hm-detail-header"><span>&#128336; ${dayLabel} &nbsp;${hour}:00\u202f\u2014\u202f${(hour+1)%24}:00 &nbsp;&middot;&nbsp; ${trades.length} trade${trades.length>1?'s':''}</span><span class="hm-detail-close" onclick="document.getElementById('${cid}-detail').innerHTML='';document.querySelectorAll('#${cid} .hm-cell.selected').forEach(e=>{e.classList.remove('selected');e.dataset.open='';})">&#x2715;</span></div><div style="overflow-x:auto;"><table><thead><tr><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Time</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Side</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Price</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Qty</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Value</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-  }
-  async function loadKucoinData(days=1){
-    document.querySelectorAll('#kucoin-days-selector .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-    const el=document.getElementById('kucoin-content'),pe=document.getElementById('kucoin-pnl');
-    el.classList.remove('error');el.classList.add('loading');el.textContent='Loading...';
-    if(pe){pe.classList.add('loading');pe.textContent='Computing P&L...';}
-    try{
-      const data=await fetchWithAuth(`/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=${days}&verbose=false&timeout=30`);
-      let t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
-      t=t.slice().sort((a,b)=>(b.trade_timestamp||b.timestamp||0)-(a.trade_timestamp||a.timestamp||0));
-      renderPnlStats('kucoin-pnl',computePnlStats(t),window.kucoinPortfolioValue||window.eqtyBotMetrics?.total_value_usdt||0,window.eqtyBotMetrics?.mid_price||0);
-      renderTradesTable('kucoin-content',t);
-    }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}}
-  }
-  async function loadGateioData(days=1){
-    document.querySelectorAll('#gateio-days-selector .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-    const el=document.getElementById('gateio-content'),pe=document.getElementById('gateio-pnl');
-    el.classList.remove('error');el.classList.add('loading');el.textContent='Loading...';
-    if(pe){pe.classList.add('loading');pe.textContent='Computing P&L...';}
-    try{
-      const data=await fetchWithAuth(`/bot-orchestration/da6132e324292f6f7b914b58333808506f741db0/history?days=${days}&verbose=false&timeout=30`);
-      let t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
-      t=t.slice().sort((a,b)=>(b.trade_timestamp||b.timestamp||0)-(a.trade_timestamp||a.timestamp||0));
-      renderPnlStats('gateio-pnl',computePnlStats(t),window.gateioPortfolioValue||window.gateioMetrics?.total_value_usdt||0,window.gateioMetrics?.mid_price||0);
-      renderTradesTable('gateio-content',t);
-    }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;if(pe){pe.classList.remove('loading');pe.innerHTML=`<div class="error">P&L error: ${e.message}</div>`;}}
-  }
-  async function loadActivityKucoin(days=14){
-    document.querySelectorAll('#activity-kucoin-days .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-    const el=document.getElementById('activity-kucoin'),det=document.getElementById('activity-kucoin-detail');
-    el.classList.add('loading');el.textContent='Loading heatmap...';if(det)det.innerHTML='';
-    try{
-      const data=await fetchWithAuth(`/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=${days}&verbose=false&timeout=30`);
-      const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
-      renderHeatmap('activity-kucoin',t,days);
-    }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;}
-  }
-  async function loadActivityGateio(days=14){
-    document.querySelectorAll('#activity-gateio-days .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-    const el=document.getElementById('activity-gateio'),det=document.getElementById('activity-gateio-detail');
-    el.classList.add('loading');el.textContent='Loading heatmap...';if(det)det.innerHTML='';
-    try{
-      const data=await fetchWithAuth(`/bot-orchestration/da6132e324292f6f7b914b58333808506f741db0/history?days=${days}&verbose=false&timeout=30`);
-      const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
-      renderHeatmap('activity-gateio',t,days);
-    }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;}
-  }
-
-
-
-
-  // -------- Initial load --------
-  syncChips(['chip-docker']);
-  refreshAll();
-  fetchBotRunningStatus();
-  setInterval(fetchBotRunningStatus, REFRESH_INTERVAL);
-  </script>
-  <div id="tab-activity" class="tab-content">
-  <div class="activity-grid">
-    <div class="card">
-      <h2>&#128200; KuCoin Activity
-        <span class="days-selector" id="activity-kucoin-days">
-          <button class="days-btn" data-days="7" onclick="loadActivityKucoin(7)">7D</button>
-          <button class="days-btn active" data-days="14" onclick="loadActivityKucoin(14)">14D</button>
-          <button class="days-btn" data-days="30" onclick="loadActivityKucoin(30)">30D</button>
-        </span>
-      </h2>
-      <div id="activity-kucoin" class="loading">Loading heatmap...</div>
-      <div id="activity-kucoin-detail"></div>
-    </div>
-    <div class="card">
-      <h2>&#128200; Gate.io Activity
-        <span class="days-selector" id="activity-gateio-days">
-          <button class="days-btn" data-days="7" onclick="loadActivityGateio(7)">7D</button>
-          <button class="days-btn active" data-days="14" onclick="loadActivityGateio(14)">14D</button>
-          <button class="days-btn" data-days="30" onclick="loadActivityGateio(30)">30D</button>
-        </span>
-      </h2>
-      <div id="activity-gateio" class="loading">Loading heatmap...</div>
-      <div id="activity-gateio-detail"></div>
-    </div>
-  </div>
-  </div>
-</body>
-</html
-
-  async function loadActivityBtc(days=14){
-    document.querySelectorAll('#activity-btc-days .days-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.days)===days));
-    const el=document.getElementById('activity-btc'),det=document.getElementById('activity-btc-detail');
-    el.classList.add('loading');el.textContent='Loading heatmap...';if(det)det.innerHTML='';
-    try{
-      const data=await fetchWithAuth(`/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=30`);
-      const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
-      renderHeatmap('activity-btc',t,days);
-    }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;}
+    
+  async function loadActivityBtc(days) {
+    if (days === undefined) days = 14;
+    document.querySelectorAll('#activity-btc-days .days-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.days) === days);
+    });
+    var el = document.getElementById('activity-btc');
+    var det = document.getElementById('activity-btc-detail');
+    el.className = 'loading'; el.textContent = 'Loading heatmap...';
+    if (det) det.innerHTML = '';
+    try {
+      var data = await fetchWithAuth('/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=' + days + '&verbose=false&timeout=30');
+      var t = (data && data.data && data.data.trades) ? data.data.trades : [];
+      renderHeatmap('activity-btc', t, days);
+    } catch(e) {
+      el.className = ''; el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+    }
   }
 
   function showBtcTab(name) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-    const panel = document.getElementById('tab-' + name);
+    document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === name); });
+    var panel = document.getElementById('tab-' + name);
     if (panel) panel.classList.add('active');
     if (name === 'activity') {
-      const btn = document.querySelector('#activity-btc-days .days-btn.active');
-      const days = btn ? parseInt(btn.dataset.days) : 14;
-      if (!document.getElementById('activity-btc')?.querySelector('.hm-wrap')) loadActivityBtc(days);
+      var btn = document.querySelector('#activity-btc-days .days-btn.active');
+      var days = btn ? parseInt(btn.dataset.days) : 14;
+      var hm = document.getElementById('activity-btc');
+      if (hm && !hm.querySelector('.hm-wrap')) loadActivityBtc(days);
     }
   }
 
