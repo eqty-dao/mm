@@ -896,7 +896,7 @@
   // ── Data loaders ────────────────────────────────────────────────────────────
   async function fetchBotRunningStatus() {
   try {
-    const response = await fetch('https://docker-proxy-eta.vercel.app/api/metrics');
+    const response = await fetch('https://docker-proxy-eta.vercel.app/api/metrics_test');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     window.testingBotRunning = data.kucoin?.bot_running === 1;
