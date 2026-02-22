@@ -352,7 +352,6 @@
 
 <script>
   const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
-    const REFRESH_INTERVAL = 120000;
 
 
   // Generic fetch via proxy
@@ -604,7 +603,11 @@
 
 
   function calculateBtcMetrics(balances, midPrice) {
-      const btcBalance = balances.find(b => b.token === 'BTC') || {};
+      if (!balances || !balances.length) {
+        const z={total:0,available:0,currentValue:0,targetValue:0,currentPct:50,targetPct:50,orderAdjust:0,inventoryRange:'0-100'};
+        return {btc:z,usdt:z,totalValue:0,isBalanced:true};
+      }
+      const btcBalance = balances.find(b => b.token === 'BTC') || {units:0,available_units:0};
       const usdtBalance = balances.find(b => b.token === 'USDT') || {};
 
       const btcTotal = parseFloat(btcBalance.units) || 0;
@@ -656,10 +659,6 @@
 
 
   function renderBotStatus(container, statusData, orderBookData, portfolioData, exchange, botId) {
-      if (!statusData && !orderBookData && !portfolioData) {
-        container.innerHTML = '<div style="color:#6b7280;text-align:center;padding:20px">Bot not yet running — start hbot-btc and refresh.</div>';
-        return;
-      }
       const logs = statusData?.data?.general_logs || [];
       const orders = parseBtcOrders(logs);
 
@@ -930,15 +929,13 @@ function updateStatusBadge() {
 
   // ── Init ────────────────────────────────────────────────────────────────────
   async function init() {
-  // Fire everything in parallel — don't block on status badge
-  fetchBotRunningStatus();  // no await — background only
+  fetchBotRunningStatus(); // fire & forget
   loadBalance();
   loadBotStatus();
   loadTradeData(1);
   updateTimestamp();
 }
-  // Script is at bottom of <body> — DOM is already built. Call init() directly.
-  init();
+  init(); // script at bottom of <body> — DOM ready
 
 </script>
 </body>
