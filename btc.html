@@ -572,10 +572,7 @@
 
 
   // ── Order parsing & asset metrics (BTC-specific) ───────────────────────────
-  function parseBtcOrders(logs) {
-    
-  }
-  function parseBtcOrders(logs) {
+    function parseBtcOrders(logs) {
       const orderPattern = /Created (LIMIT_MAKER|LIMIT) (BUY|SELL) order (\S+) for ([\d.]+) BTC-USDT at ([\d.]+)/;
       const uniqueOrders = new Map();
 
@@ -931,13 +928,8 @@ function updateStatusBadge() {
   loadTradeData(1);
   updateTimestamp();
 }
-  // Safe init: script is at bottom of <body> so DOM is already ready.
-  // Use readyState check as belt-and-suspenders.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  // Script is at bottom of <body> — DOM is already built. Call init() directly.
+  init();
 
 </script>
 </body>
