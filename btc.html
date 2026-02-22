@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BTC/USDT · KuCoin · Testing</title>
+  <title>BTC/USDT · Binance · Testing</title>
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
@@ -304,11 +304,12 @@
   <header>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
-        <h1 id="page-title">🧪 BTC/USDT &middot; KuCoin &middot; Testing</h1>
+        <h1 id="page-title">🧪 BTC/USDT &middot; Binance &middot; Testing</h1>
         <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
           <span id="bot-status-badge" class="status-badge status-unknown">Checking...</span>
           <span style="font-size:12px;color:#6b7280;font-family:monospace;">
-            Bot&nbsp;843b01597349&hellip; &middot; BTC-USDT &middot; KuCoin</span>
+            Bot&nbsp;843b01597349&hellip; &middot; UID&nbsp;1217248639 &middot; BTC-USDT
+          </span>
         </div>
       </div>
       <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle theme">&#9728;&#65039;</button>
@@ -317,8 +318,8 @@
 
   <!-- Balance -->
   <div class="card">
-    <h2>KuCoin Balance</h2>
-    <div id="btc-balance" class="loading">Loading KuCoin balance...</div>
+    <h2>Binance Balance</h2>
+    <div id="btc-balance" class="loading">Loading Binance balance...</div>
   </div>
 
   <!-- Bot Status -->
@@ -341,7 +342,7 @@
 
   <!-- Trades -->
   <div class="card">
-    <h2>KuCoin Trades</h2>
+    <h2>Binance Trades</h2>
     <div id="btc-content" class="loading">Loading trades...</div>
   </div>
 
@@ -603,8 +604,9 @@
 
   function calculateBtcMetrics(balances, midPrice) {
       if (!balances || !balances.length) {
-        const z={total:0,available:0,currentValue:0,targetValue:0,currentPct:50,targetPct:50,orderAdjust:0,inventoryRange:'0-100'};
-        return {btc:z,usdt:z,totalValue:0,isBalanced:true};
+        const btcZ={total:0,available:0,currentValue:0,targetValue:0,currentPct:0,targetPct:40,orderAdjust:0,inventoryRange:'21% - 59%'};
+        const usdtZ={total:0,available:0,currentValue:0,targetValue:0,currentPct:100,targetPct:60,orderAdjust:0,inventoryRange:'41% - 79%'};
+        return {btc:btcZ,usdt:usdtZ,totalValue:0,isBalanced:false};
       }
       const btcBalance = balances.find(b => b.token === 'BTC') || {units:0,available_units:0};
       const usdtBalance = balances.find(b => b.token === 'USDT') || {};
@@ -621,23 +623,25 @@
       const btcCurrentPct = (btcValueUSDT / totalValueUSDT) * 100;
       const usdtCurrentPct = (usdtValueUSDT / totalValueUSDT) * 100;
 
-      const targetPct = 50.0;
-      const targetValueUSDT = totalValueUSDT / 2;
+      const btcTargetPct  = 40.0;
+      const usdtTargetPct = 60.0;
+      const btcTargetValue  = totalValueUSDT * 0.4;
+      const usdtTargetValue = totalValueUSDT * 0.6;
 
-      const btcOrderAdjust = (targetValueUSDT / btcValueUSDT) * 100;
-      const usdtOrderAdjust = (targetValueUSDT / usdtValueUSDT) * 100;
+      const btcOrderAdjust  = btcValueUSDT  > 0 ? (btcTargetValue  / btcValueUSDT)  * 100 : 0;
+      const usdtOrderAdjust = usdtValueUSDT > 0 ? (usdtTargetValue / usdtValueUSDT) * 100 : 0;
 
-      const inventoryMin = 31.0;
-      const inventoryMax = 69.0;
+      const inventoryMin = 21.0;
+      const inventoryMax = 59.0;
 
       return {
         btc: {
           total: btcTotal,
           available: btcAvailable,
           currentValue: btcValueUSDT,
-          targetValue: targetValueUSDT,
+          targetValue: btcTargetValue,
           currentPct: btcCurrentPct,
-          targetPct: targetPct,
+          targetPct: btcTargetPct,
           orderAdjust: btcOrderAdjust,
           inventoryRange: `${inventoryMin}% - ${inventoryMax}%`
         },
@@ -645,11 +649,11 @@
           total: usdtTotal,
           available: usdtAvailable,
           currentValue: usdtValueUSDT,
-          targetValue: targetValueUSDT,
+          targetValue: usdtTargetValue,
           currentPct: usdtCurrentPct,
-          targetPct: targetPct,
+          targetPct: usdtTargetPct,
           orderAdjust: usdtOrderAdjust,
-          inventoryRange: `${inventoryMin}% - ${inventoryMax}%`
+          inventoryRange: `${100-inventoryMax}% - ${100-inventoryMin}%`
         },
         totalValue: totalValueUSDT,
         isBalanced: btcCurrentPct >= inventoryMin && btcCurrentPct <= inventoryMax
@@ -676,7 +680,7 @@
 
       const balanceWarning = !assets.isBalanced ? `
         <div class="warning">
-          ⚠️ Portfolio unbalanced! EQTY: ${assets.btc.currentPct.toFixed(1)}% (target: 50%)
+          ⚠️ Portfolio unbalanced! BTC: ${assets.btc.currentPct.toFixed(1)}% (target: 40%)
         </div>
       ` : '';
 
@@ -718,9 +722,9 @@
               <tr>
                 <td>${exchangeName}</td>
                 <td>BTC-USDT</td>
-                <td>${bestBid.toFixed(6)}</td>
-                <td>${bestAsk.toFixed(6)}</td>
-                <td>${midPrice.toFixed(7)}</td>
+                <td>${bestBid.toFixed(2)}</td>
+                <td>${bestAsk.toFixed(2)}</td>
+                <td>${midPrice.toFixed(2)}</td>
               </tr>
             </tbody>
           </table>
@@ -733,19 +737,19 @@
               <thead>
                 <tr>
                   <th></th>
-                  <th>EQTY</th>
+                  <th>BTC</th>
                   <th>USDT</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td><strong>Total Balance</strong></td>
-                  <td>${assets.btc.total.toFixed(0)}</td>
+                  <td>${assets.btc.total.toFixed(6)}</td>
                   <td>${assets.usdt.total.toFixed(4)}</td>
                 </tr>
                 <tr>
                   <td><strong>Available Balance</strong></td>
-                  <td>${assets.btc.available.toFixed(0)}</td>
+                  <td>${assets.btc.available.toFixed(6)}</td>
                   <td>${assets.usdt.available.toFixed(4)}</td>
                 </tr>
                 <tr>
@@ -808,9 +812,9 @@
                   return `
                     <tr>
                       <td><span class="pill pill-sell">SELL</span></td>
-                      <td>${o.price.toFixed(6)}</td>
+                      <td>${o.price.toFixed(2)}</td>
                       <td>${spread}%</td>
-                      <td>${o.amount.toFixed(0)}</td>
+                      <td>${o.amount.toFixed(6)}</td>
                     </tr>
                   `;
                 }).join('')}
@@ -819,9 +823,9 @@
                   return `
                     <tr>
                       <td><span class="pill pill-buy">BUY</span></td>
-                      <td>${o.price.toFixed(6)}</td>
+                      <td>${o.price.toFixed(2)}</td>
                       <td>${spread}%</td>
-                      <td>${o.amount.toFixed(0)}</td>
+                      <td>${o.amount.toFixed(6)}</td>
                     </tr>
                   `;
                 }).join('')}
@@ -868,10 +872,10 @@ function updateStatusBadge() {
 }
   async function loadBalance() {
   const el = document.getElementById('btc-balance');
-  el.className = 'loading'; el.textContent = 'Loading KuCoin balance...';
+  el.className = 'loading'; el.textContent = 'Loading Binance balance...';
   try {
-    const data = await fetchPortfolioState(['cex_mm_binance'], ['kucoin']);
-    const balances = data?.cex_mm_binance?.kucoin || [];
+    const data = await fetchPortfolioState(['cex_mm_binance'], ['binance']);
+    const balances = data?.cex_mm_binance?.binance || [];
     renderBalanceTable('btc-balance', balances);
     window.btcPortfolioValue = balances.reduce((s,b) => s + parseFloat(b.value||0), 0);
   } catch(e) {
@@ -886,12 +890,12 @@ function updateStatusBadge() {
     const botId = '843b015973491f3e50405a3e5993d3a2a30c207c';
     const [statusData, orderBookData, portfolioData] = await Promise.all([
       fetchBotStatus(botId),
-      fetchOrderBook('kucoin', 'BTC-USDT'),
-      fetchPortfolioState(['cex_mm_binance'], ['kucoin'])
+      fetchOrderBook('binance', 'BTC-USDT'),
+      fetchPortfolioState(['cex_mm_binance'], ['binance'])
     ]);
     await fetchBotRunningStatus();
     try {
-      renderBotStatus(container, statusData, orderBookData, portfolioData, 'kucoin', botId);
+      renderBotStatus(container, statusData, orderBookData, portfolioData, 'binance', botId);
     } catch(re) {
       container.innerHTML = `<div class="error">Render error: ${re.message}</div>`;
     }
