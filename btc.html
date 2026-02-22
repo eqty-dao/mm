@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BTC/USDT · Binance · Testing</title>
+  <title>BTC/USDT · KuCoin · Testing</title>
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
@@ -304,7 +304,7 @@
   <header>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
-        <h1 id="page-title">🧪 BTC/USDT &middot; Binance &middot; Testing</h1>
+        <h1 id="page-title">🧪 BTC/USDT &middot; KuCoin &middot; Testing</h1>
         <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
           <span id="bot-status-badge" class="status-badge status-unknown">Checking...</span>
           <span style="font-size:12px;color:#6b7280;font-family:monospace;">
@@ -318,8 +318,8 @@
 
   <!-- Balance -->
   <div class="card">
-    <h2>Binance Balance</h2>
-    <div id="btc-balance" class="loading">Loading Binance balance...</div>
+    <h2>KuCoin Balance</h2>
+    <div id="btc-balance" class="loading">Loading KuCoin balance...</div>
   </div>
 
   <!-- Bot Status -->
@@ -342,7 +342,7 @@
 
   <!-- Trades -->
   <div class="card">
-    <h2>Binance Trades</h2>
+    <h2>KuCoin Trades</h2>
     <div id="btc-content" class="loading">Loading trades...</div>
   </div>
 
@@ -872,10 +872,10 @@ function updateStatusBadge() {
 }
   async function loadBalance() {
   const el = document.getElementById('btc-balance');
-  el.className = 'loading'; el.textContent = 'Loading Binance balance...';
+  el.className = 'loading'; el.textContent = 'Loading KuCoin balance...';
   try {
-    const data = await fetchPortfolioState(['cex_mm_binance'], ['binance']);
-    const balances = data?.cex_mm_binance?.binance || [];
+    const data = await fetchPortfolioState(['cex_mm_binance'], ['kucoin']);
+    const balances = data?.cex_mm_binance?.kucoin || [];
     renderBalanceTable('btc-balance', balances);
     window.btcPortfolioValue = balances.reduce((s,b) => s + parseFloat(b.value||0), 0);
   } catch(e) {
@@ -890,12 +890,12 @@ function updateStatusBadge() {
     const botId = '843b015973491f3e50405a3e5993d3a2a30c207c';
     const [statusData, orderBookData, portfolioData] = await Promise.all([
       fetchBotStatus(botId),
-      fetchOrderBook('binance', 'BTC-USDT'),
-      fetchPortfolioState(['cex_mm_binance'], ['binance'])
+      fetchOrderBook('kucoin', 'BTC-USDT'),
+      fetchPortfolioState(['cex_mm_binance'], ['kucoin'])
     ]);
     await fetchBotRunningStatus();
     try {
-      renderBotStatus(container, statusData, orderBookData, portfolioData, 'binance', botId);
+      renderBotStatus(container, statusData, orderBookData, portfolioData, 'kucoin', botId);
     } catch(re) {
       container.innerHTML = `<div class="error">Render error: ${re.message}</div>`;
     }
