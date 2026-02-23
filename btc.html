@@ -947,27 +947,25 @@ function updateStatusBadge() {
   }
 }
   async function loadTradeData(days = 1) {
-  document.querySelectorAll('.days-btn').forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.days) === days);
-  });
-  const el = document.getElementById('btc-content');
-  el.className = 'loading'; el.textContent = 'Loading trades...';
-  document.getElementById('btc-pnl').className = 'loading';
-  document.getElementById('btc-pnl').textContent = 'Loading P&L...';
-  try {
-    const data = await fetchWithAuth(
-      `/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=30`
-    );
-    const trades = data?.data?.trades || [];
-    renderTradesTable('btc-content', trades);
-    const stats = computePnlStats(trades);
-    const pv = window.btcPortfolioValue || 0;
-    const mp = window.testingBtcMetrics?.mid_price || 0;
-    renderPnlStats('btc-pnl', stats, pv, mp);
-  } catch(e) {
-    el.className = 'error'; el.textContent = 'Error: ' + e.message;
-  }
+    document.querySelectorAll('.days-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
+    const el = document.getElementById('btc-content');
+    const pnlEl = document.getElementById('btc-pnl');
+    el.className = 'loading'; el.textContent = 'Loading trades...';
+    pnlEl.className = 'loading'; pnlEl.textContent = 'Loading P&L...';
+    try {
+        const data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=30`);
+        const trades = data?.data?.trades || [];  // ← FIX: never undefined
+        renderTradesTable('btc-content', trades);
+        const stats = computePnlStats(trades);
+        const pv = window.btcPortfolioValue || 0;
+        const mp = window.testingBtcMetrics?.midprice || 0;
+        renderPnlStats('btc-pnl', stats, pv, mp);
+    } catch(e) {
+        el.className = 'error'; el.textContent = 'Error: ' + e.message;
+        pnlEl.className = 'error'; pnlEl.textContent = 'Error loading P&L';  // ← FIX: update both
+    }
 }
+
   function updateTimestamp() {
   const el = document.getElementById('last-update');
   if (el) el.textContent = 'Last updated: ' + new Date().toLocaleString();
