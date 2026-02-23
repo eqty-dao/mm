@@ -953,7 +953,7 @@ function updateStatusBadge() {
     el.className = 'loading'; el.textContent = 'Loading trades...';
     pnlEl.className = 'loading'; pnlEl.textContent = 'Loading P&L...';
     try {
-        const data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=30`);
+        const data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`);
         const trades = data?.data?.trades || [];  // ← FIX: never undefined
         renderTradesTable('btc-content', trades);
         const stats = computePnlStats(trades);
@@ -1059,7 +1059,7 @@ function updateStatusBadge() {
     el.className = 'loading'; el.textContent = 'Loading heatmap...';
     if (det) det.innerHTML = '';
     try {
-      var data = await fetchWithAuth('/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=' + days + '&verbose=false&timeout=30');
+      var data = await fetchWithAuth('/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=' + days + '&verbose=false&timeout=8');
       var t = (data && data.data && data.data.trades) ? data.data.trades : [];
       renderHeatmap('activity-btc', t, days);
     } catch(e) {
