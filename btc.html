@@ -979,7 +979,7 @@ function updateStatusBadge() {
   async function init() {
   fetchBotRunningStatus(); // fire & forget
   loadBalance();
-  loadBotStatus();
+  await loadBotStatus();
   loadTradeData(1);
   updateTimestamp();
 }
