@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const targetUrl = `${API_BASE}${endpoint}`;
+  const targetUrl = `${API_BASE}/${endpoint}`;
 
   try {
     // Build fetch options
