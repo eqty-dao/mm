@@ -445,7 +445,7 @@
         (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
     );
 
-  const rows = trades.map(t => {
+  const rows = sorted.map(t => {
     const dt = new Date(t.trade_timestamp || t.timestamp || Date.now());
     const side = (t.trade_type || t.side || '').toUpperCase();
     const sideClass = side === 'BUY' ? 'pill pill-buy' : 'pill pill-sell';
