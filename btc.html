@@ -456,7 +456,6 @@
         <td>${dt.toLocaleString()}</td>
         <td>${t.symbol || '-'}</td>
         <td><span class="${sideClass}">${side || '-'}</span></td>
-        //<td>${t.price ?? '-'}</td>
         <td>${t.price ? parseFloat(t.price).toFixed(2) : '-'}</td>
         <td>${cleanQty || '-'}</td>
         <td>${t.market || t.exchange || '-'}</td>
