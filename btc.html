@@ -440,6 +440,10 @@
     container.innerHTML = '<div style="color:#6b7280; text-align:center;">No trades found</div>';
     return;
   }
+  // Sort newest first
+    const sorted = [...trades].sort((a, b) => 
+        (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
+    );
 
   const rows = trades.map(t => {
     const dt = new Date(t.trade_timestamp || t.timestamp || Date.now());
