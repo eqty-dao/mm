@@ -895,6 +895,9 @@
         mid_price: midPrice,
         active_orders_count: buyOrders.length + sellOrders.length
       };
+      if (window.lastBtcTradeStats) {
+    renderPnlStats('btc-pnl', window.lastBtcTradeStats, window.btcPortfolioValue || 0, midPrice);
+      }
     }
 
   // ── Data loaders ────────────────────────────────────────────────────────────
@@ -961,6 +964,7 @@ function updateStatusBadge() {
         const trades = data?.response?.data?.data?.trades || [];
         renderTradesTable('btc-content', trades);
         const stats = computePnlStats(trades);
+        window.lastBtcTradeStats = stats;
         const pv = window.btcPortfolioValue || 0;
         const mp = window.testingBtcMetrics?.midprice || 0;
         renderPnlStats('btc-pnl', stats, pv, mp);
