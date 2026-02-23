@@ -966,7 +966,7 @@ function updateStatusBadge() {
         const stats = computePnlStats(trades);
         window.lastBtcTradeStats = stats;
         const pv = window.btcPortfolioValue || 0;
-        const mp = window.testingBtcMetrics?.midprice || 0;
+        const mp = window.testingBtcMetrics?.mid_price || 0;
         renderPnlStats('btc-pnl', stats, pv, mp);
     } catch(e) {
         el.className = 'error'; el.textContent = 'Error: ' + e.message;
