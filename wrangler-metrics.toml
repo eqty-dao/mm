@@ -1,0 +1,8 @@
+name = "btc-metrics"
+main = "worker-metrics-btc.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Secrets added via: wrangler secret put API_USERNAME
+# Secrets added via: wrangler secret put API_PASSWORD
+

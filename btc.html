@@ -395,8 +395,8 @@
 </div><!-- /container -->
 
 <script>
-  const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
-
+  //const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
+  const API_BASE = 'https://btc-proxy.eqtydao.workers.dev';
 
   // Generic fetch via proxy
   async function fetchWithAuth(endpoint) {
@@ -903,7 +903,8 @@
   // ── Data loaders ────────────────────────────────────────────────────────────
   async function fetchBotRunningStatus() {
   try {
-    const response = await fetch('https://docker-proxy-eta.vercel.app/api/metrics_test');
+    //const response = await fetch('https://docker-proxy-eta.vercel.app/api/metrics_test');
+    const response = await fetch('https://btc-metrics.eqtydao.workers.dev');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     window.testingBotRunning = data.binance?.bot_running === 1;
