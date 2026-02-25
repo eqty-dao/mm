@@ -1077,49 +1077,6 @@ function updateStatusBadge() {
     if (!dayMap[key]) dayMap[key] = { label, trades: [] };
     dayMap[key].trades.push(t);
   }
-  const pos = 'color:#15803d;font-weight:700', neg = 'color:#dc2626;font-weight:700';
-  const rows = Object.keys(dayMap).sort().map(key => {
-    const { label, trades: dt } = dayMap[key];
-    const s = computePnlStats(dt);
-    const spreadPct = s.avgBuyPrice > 0 ? (s.spread / s.avgBuyPrice * 100) : 0;
-    const spreadOk = spreadPct > 0;
-    const ret = portfolioValue > 0 ? (s.netPnl / portfolioValue * 100) : null;
-    const netDisplay = s.netEqtyChange !== 0 ? s.netEqtyChange.toFixed(6) : '—';
-    return `<tr>
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${label}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">
-        <span style="${spreadOk ? pos : neg}">${spreadPct > 0 ? spreadPct.toFixed(2) : '—'}</span>${spreadOk ? ' ✓' : ''}
-      </td>
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;${s.netEqtyChange > 0 ? pos : s.netEqtyChange < 0 ? neg : ''}">${netDisplay}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${ret !== null ? `<span style="${ret >= 0 ? pos : neg}">${ret >= 0 ? '+' : ''}${ret.toFixed(3)}%</span>` : '—'}</td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = `<div style="overflow-x:auto;margin-top:16px">
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <thead><tr>
-        <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Day</th>
-        <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Spread</th>
-        <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Net BTC</th>
-        <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Return</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-}
-  function renderDailySummary(containerId, trades, portfolioValue) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (!trades || !trades.length) { el.innerHTML = ''; return; }
-  const dayMap = {};
-  for (const t of trades) {
-    const tsRaw = t.trade_timestamp || t.timestamp || 0;
-    const tsSec = tsRaw > 1e10 ? tsRaw / 1000 : tsRaw;
-    const d = new Date(tsSec * 1000);
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (!dayMap[key]) dayMap[key] = { label, trades: [] };
-    dayMap[key].trades.push(t);
-  }
   const pos = 'color:#15803d;font-weight:700';
   const neg = 'color:#dc2626;font-weight:700';
   const rows = Object.keys(dayMap).sort().reverse().map(key => {
