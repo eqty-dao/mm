@@ -1115,11 +1115,7 @@ function updateStatusBadge() {
     );
     console.log('[response]', JSON.stringify(data.response, null, 2));
     // Try all known response shapes
-    var t = data?.response?.data?.data?.trades
-         || data?.data?.data?.trades
-         || data?.data?.trades
-         || data?.trades
-         || [];
+    var t = data?.response?.data?.data?.trades || [];
     console.log('[activity] trades found:', t.length, '| raw keys:', Object.keys(data || {}));
     renderHeatmap('activity-btc', t, days);
     if (typeof renderDailySummary === 'function') {
