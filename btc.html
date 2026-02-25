@@ -955,10 +955,16 @@ function updateStatusBadge() {
   document.getElementById('btc-pnl').className = 'loading';
   document.getElementById('btc-pnl').textContent = 'Loading P&L...';
   try {
-    const resp = await fetch('https://btc-kucoin_test-trades.eqtydao.workers.dev?symbol=BTC-USDT&days=${days}');
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    const trades = data.trades || [];
+    const data = await fetchWithAuth(`kucoin/fills?symbol=BTC-USDT&days=${days}`);
+    const trades = (data?.data?.items || []).map(f => ({
+      trade_timestamp: Math.floor(f.tradeTime / 1e6),
+      trade_type:      f.side.toUpperCase(),
+      price:           f.price,
+      quantity:        f.size,
+      symbol:          f.symbol,
+      market:          'kucoin',
+      raw_json:        { trade_fee: { percent: parseFloat(f.feeRate) || 0.001 } }
+    }));
     renderTradesTable('btc-content', trades);
     const stats = computePnlStats(trades);
     const pv = window.btcPortfolioValue || 0;
@@ -968,6 +974,7 @@ function updateStatusBadge() {
     el.className = 'error'; el.textContent = 'Error: ' + e.message;
   }
 }
+
   function updateTimestamp() {
   const el = document.getElementById('last-update');
   if (el) el.textContent = 'Last updated: ' + new Date().toLocaleString();
@@ -1061,10 +1068,18 @@ function updateStatusBadge() {
     el.className = 'loading'; el.textContent = 'Loading heatmap...';
     if (det) det.innerHTML = '';
     try {
-      var resp = await fetch('https://btc-kucoin_test-trades.eqtydao.workers.dev?symbol=BTC-USDT&days=' + days);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      var data = await resp.json();
-      var t = data.trades || [];
+      var data = await fetchWithAuth(`kucoin/fills?symbol=BTC-USDT&days=${days}`);
+      var t = (data?.data?.items || []).map(function(f) {
+        return {
+          trade_timestamp: Math.floor(f.tradeTime / 1e6),
+          trade_type:      f.side.toUpperCase(),
+          price:           f.price,
+          quantity:        f.size,
+          symbol:          f.symbol,
+          market:          'kucoin',
+          raw_json:        { trade_fee: { percent: parseFloat(f.feeRate) || 0.001 } }
+        };
+      });
       renderHeatmap('activity-btc', t, days);
       renderDailySummary('daily-summary-btc', t, window.btcPortfolioValue || 0);
     } catch(e) {
