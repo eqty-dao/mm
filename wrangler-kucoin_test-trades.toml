@@ -1,0 +1,9 @@
+name = "btc-kucoin_test-trades"
+main = "worker-kucoin_test-trades.js"
+compatibility_date = "2025-01-01"
+
+# Secrets (never put real values here):
+# wrangler secret put KUCOIN_API_KEY       --config wrangler-kucoin_test-trades.toml
+# wrangler secret put KUCOIN_API_SECRET    --config wrangler-kucoin_test-trades.toml
+# wrangler secret put KUCOIN_API_PASSPHRASE --config wrangler-kucoin_test-trades.toml
+
