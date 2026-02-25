@@ -955,8 +955,16 @@ function updateStatusBadge() {
   el.className = 'loading'; el.textContent = 'Loading trades...';
   pnlEl.className = 'loading'; pnlEl.textContent = 'Loading P&L...';
   try {
-    const data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`);
-    const trades = data?.response?.data?.data?.trades || [];
+    const data = await fetchWithAuth(`kucoin/fills?symbol=BTC-USDT&days=${days}`);
+    const trades = (data?.data?.items || []).map(f => ({
+      trade_timestamp: f.createdAt,           // ← ms, not f.tradeTime
+      trade_type:      f.side.toUpperCase(),
+      price:           f.price,
+      quantity:        f.size,
+      symbol:          f.symbol,
+      market:          'kucoin',
+      raw_json:        { trade_fee: { percent: parseFloat(f.feeRate) || 0.001 } }
+    }));
     renderTradesTable('btc-content', trades);
     const stats = computePnlStats(trades);
     window.lastBtcTradeStats = stats;
@@ -1098,8 +1106,6 @@ function updateStatusBadge() {
     </table>
   </div>`;
 }
-
-  
   async function loadActivityBtc(days) {
   if (days === undefined) days = 14;
   document.querySelectorAll('#activity-btc-days .days-btn').forEach(function(b) {
@@ -1110,13 +1116,18 @@ function updateStatusBadge() {
   el.className = 'loading'; el.textContent = 'Loading heatmap...';
   if (det) det.innerHTML = '';
   try {
-    var data = await fetchWithAuth(
-      `bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`
-    );
-    console.log('[response]', JSON.stringify(data.response, null, 2));
-    // Try all known response shapes
-    var t = data?.response?.data?.data?.trades || [];
-    console.log('[activity] trades found:', t.length, '| raw keys:', Object.keys(data || {}));
+    var data = await fetchWithAuth(`kucoin/fills?symbol=BTC-USDT&days=${days}`);
+    var t = (data?.data?.items || []).map(function(f) {
+      return {
+        trade_timestamp: f.createdAt,
+        trade_type:      f.side.toUpperCase(),
+        price:           f.price,
+        quantity:        f.size,
+        symbol:          f.symbol,
+        market:          'kucoin',
+        raw_json:        { trade_fee: { percent: parseFloat(f.feeRate) || 0.001 } }
+      };
+    });
     renderHeatmap('activity-btc', t, days);
     if (typeof renderDailySummary === 'function') {
       renderDailySummary('daily-summary-btc', t, window.btcPortfolioValue || 0);
@@ -1130,6 +1141,7 @@ function updateStatusBadge() {
   }
 }
 
+ 
   function showBtcTab(name) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
     document.querySelectorAll('.tab').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === name); });
