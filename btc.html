@@ -991,9 +991,13 @@ function updateStatusBadge() {
       const i=t*(C.length-1),lo=Math.floor(i),hi=Math.min(Math.ceil(i),C.length-1),f=i-lo;
       return`rgb(${Math.round(C[lo][0]+f*(C[hi][0]-C[lo][0]))},${Math.round(C[lo][1]+f*(C[hi][1]-C[lo][1]))},${Math.round(C[lo][2]+f*(C[hi][2]-C[lo][2]))})`;
     }
-    function renderHeatmap(containerId,trades,days){
-      const el=document.getElementById(containerId);if(!el)return;
-      if(!trades.length){el.innerHTML='<div class="loading">No trades in this period.</div>';return;}
+    function renderHeatmap(containerId, trades, days) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!trades || !trades.length) {        // ← was: if (!trades.length)
+    el.innerHTML = '<div class="loading">No trades in this period.</div>';
+    return;
+  }
       window._hmTrades=window._hmTrades||{};window._hmTrades[containerId]=trades;
       const dayMap={},dayLabels=[],matrix=[];
       for(let d=0;d<days;d++){
@@ -1062,12 +1066,26 @@ function updateStatusBadge() {
   el.className = 'loading'; el.textContent = 'Loading heatmap...';
   if (det) det.innerHTML = '';
   try {
-    var data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`);
-    var t = data?.response?.data?.data?.trades || [];
+    var data = await fetchWithAuth(
+      `bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`
+    );
+    // Try all known response shapes
+    var t = data?.response?.data?.data?.trades
+         || data?.data?.data?.trades
+         || data?.data?.trades
+         || data?.trades
+         || [];
+    console.log('[activity] trades found:', t.length, '| raw keys:', Object.keys(data || {}));
     renderHeatmap('activity-btc', t, days);
-    renderDailySummary('daily-summary-btc', t, window.btcPortfolioValue || 0);
+    if (typeof renderDailySummary === 'function') {
+      renderDailySummary('daily-summary-btc', t, window.btcPortfolioValue || 0);
+    } else {
+      console.warn('renderDailySummary missing – check your btc.html version');
+    }
   } catch(e) {
-    el.className = ''; el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+    el.className = '';
+    el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+    console.error('[loadActivityBtc]', e);
   }
 }
 
