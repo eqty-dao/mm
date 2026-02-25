@@ -533,7 +533,72 @@ Expected output:
 }
 ```
 
-### 3.2 Zabbix Configuration
+### 3.2 Vercel Free Tier Optimization
+
+> ⚠️ **Important:** Without this optimization, Zabbix will exhaust the Vercel free tier within days.
+
+#### The Problem
+
+Each Zabbix **HTTP Agent** item makes an independent HTTP request to Vercel. Every request triggers a serverless function **invocation**, which counts toward the monthly quota.
+
+With the naive setup of 18 HTTP Agent items × 3 hosts × 1 poll/min:
+
+```
+18 items × 3 hosts × 1 req/min × 60 × 24 × 30 = ~2,332,800 invocations/month
+```
+
+The Vercel **Hobby (free) tier** allows only **100,000 invocations/month** — this blows past it in under 2 days.
+
+#### The Solution — Dependent Items
+
+Use **1 master HTTP Agent item** per host that fetches the full JSON payload once. All other items become **Dependent items** that extract their value locally using JSONPath preprocessing — no additional HTTP request, zero extra Vercel invocations.
+
+```
+Before: 18 HTTP Agent items → 18 Vercel calls per cycle
+After:   1 HTTP Agent (master) + 18 Dependent items → 1 Vercel call per cycle
+```
+
+| Host | Before | After | Monthly saving |
+|---|---|---|---|
+| MM-Bot-KuCoin | 18 calls/min | 1 call/min | ~734,400 invocations |
+| MM-Bot-GateIO | 18 calls/min | 1 call/min | ~734,400 invocations |
+| MM-Bot-Binance | 18 calls/min | 1 call/min | ~734,400 invocations |
+| **Total** | **54 calls/min** | **3 calls/min** | **~2,203,200/month** |
+
+**Result: ~129,600 invocations/month — within the free tier limit. ✅**
+
+#### Master Item Configuration
+
+For each host, create one master item:
+
+| Field | Value |
+|---|---|
+| **Name** | `Metrics Raw (Master)` |
+| **Type** | HTTP agent |
+| **Key** | `bot.metrics.raw` |
+| **Value type** | Text |
+| **URL** | `https://docker-proxy-eta.vercel.app/api/metrics` |
+| **Update interval** | 1m |
+| **History** | 1h (raw JSON, no need to keep longer) |
+| **Trends** | Disabled |
+
+> For `MM-Bot-Binance`, use `/api/metrics_test` instead.
+
+#### Dependent Item Configuration
+
+All other items are configured as:
+
+| Field | Value |
+|---|---|
+| **Type** | Dependent item |
+| **Master item** | `MM-Bot-<Exchange>: Metrics Raw (Master)` |
+| **Preprocessing** | JSONPath (e.g. `$.kucoin.bot_running`) |
+
+The JSONPath, triggers, graphs and value mappings remain **exactly the same** as before — only the item type changes from HTTP Agent to Dependent.
+
+---
+
+### 3.3 Zabbix Configuration
 
 #### Create Hosts
 
@@ -544,12 +609,17 @@ Expected output:
    - **Interfaces**: None needed (HTTP agent)
 3. Repeat for `MM-Bot-GateIO`
 
-#### Create Items (18 per host)
+#### Items (18 per host)
 
-For each host, create items with:
-- **Type**: HTTP agent
+> See [Section 3.2](#32-vercel-free-tier-optimization) — all items except the master should be **Dependent items**, not HTTP Agent, to avoid exhausting the Vercel free tier.
+
+**Master item** (1 per host, HTTP Agent):
+- **Key**: `bot.metrics.raw`
 - **URL**: `https://docker-proxy-eta.vercel.app/api/metrics`
 - **Update interval**: 1m
+
+**Dependent items** (all others, Dependent type):
+- **Master item**: `Metrics Raw (Master)`
 - **Preprocessing**: JSONPath (e.g., `$.kucoin.eqty_current_pct`)
 
 **Key Items:**
@@ -600,7 +670,7 @@ Widgets:
 - Plain text widgets showing current metrics for both exchanges
 - Problems widget for active alerts
 
-### 3.3 Value Mappings
+### 3.4 Value Mappings
 
 Create reusable value mappings:
 
@@ -612,7 +682,7 @@ Create reusable value mappings:
 
 Apply to respective items in **Value mapping** dropdown.
 
-### 3.4 Alerts Setup
+### 3.5 Alerts Setup
 
 **Alerts** → **Actions** → **Trigger actions** → **Create action**
 
