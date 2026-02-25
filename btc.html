@@ -389,6 +389,7 @@
       </h2>
       <div id="activity-btc" class="loading">Loading heatmap...</div>
       <div id="activity-btc-detail"></div>
+      <div id="daily-summary-btc"></div>
     </div>
   </div>
 </div><!-- /container -->
@@ -439,8 +440,12 @@
     container.innerHTML = '<div style="color:#6b7280; text-align:center;">No trades found</div>';
     return;
   }
+  // Sort newest first
+    const sorted = [...trades].sort((a, b) => 
+        (b.trade_timestamp || b.timestamp || 0) - (a.trade_timestamp || a.timestamp || 0)
+    );
 
-  const rows = trades.map(t => {
+  const rows = sorted.map(t => {
     const dt = new Date(t.trade_timestamp || t.timestamp || Date.now());
     const side = (t.trade_type || t.side || '').toUpperCase();
     const sideClass = side === 'BUY' ? 'pill pill-buy' : 'pill pill-sell';
@@ -455,7 +460,7 @@
         <td>${dt.toLocaleString()}</td>
         <td>${t.symbol || '-'}</td>
         <td><span class="${sideClass}">${side || '-'}</span></td>
-        <td>${t.price ?? '-'}</td>
+        <td>${t.price ? parseFloat(t.price).toFixed(2) : '-'}</td>
         <td>${cleanQty || '-'}</td>
         <td>${t.market || t.exchange || '-'}</td>
       </tr>
@@ -890,6 +895,9 @@
         mid_price: midPrice,
         active_orders_count: buyOrders.length + sellOrders.length
       };
+      if (window.lastBtcTradeStats) {
+    renderPnlStats('btc-pnl', window.lastBtcTradeStats, window.btcPortfolioValue || 0, midPrice);
+      }
     }
 
   // ── Data loaders ────────────────────────────────────────────────────────────
@@ -946,35 +954,37 @@ function updateStatusBadge() {
   }
 }
   async function loadTradeData(days = 1) {
-  document.querySelectorAll('.days-btn').forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.days) === days);
-  });
-  const el = document.getElementById('btc-content');
-  el.className = 'loading'; el.textContent = 'Loading trades...';
-  document.getElementById('btc-pnl').className = 'loading';
-  document.getElementById('btc-pnl').textContent = 'Loading P&L...';
-  try {
-    const data = await fetchWithAuth(
-      `/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=30`
-    );
-    const trades = data?.data?.trades || [];
-    renderTradesTable('btc-content', trades);
-    const stats = computePnlStats(trades);
-    const pv = window.btcPortfolioValue || 0;
-    const mp = window.testingBtcMetrics?.mid_price || 0;
-    renderPnlStats('btc-pnl', stats, pv, mp);
-  } catch(e) {
-    el.className = 'error'; el.textContent = 'Error: ' + e.message;
-  }
+    document.querySelectorAll('.days-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
+    const el = document.getElementById('btc-content');
+    const pnlEl = document.getElementById('btc-pnl');
+    el.className = 'loading'; el.textContent = 'Loading trades...';
+    pnlEl.className = 'loading'; pnlEl.textContent = 'Loading P&L...';
+    try {
+        const data = await fetchWithAuth(`bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=${days}&verbose=false&timeout=8`);
+        const trades = data?.response?.data?.data?.trades || [];
+        renderTradesTable('btc-content', trades);
+        const stats = computePnlStats(trades);
+        window.lastBtcTradeStats = stats;
+        const pv = window.btcPortfolioValue || 0;
+        const mp = window.testingBtcMetrics?.mid_price || 0;
+        renderPnlStats('btc-pnl', stats, pv, mp);
+    } catch(e) {
+        el.className = 'error'; el.textContent = 'Error: ' + e.message;
+        pnlEl.className = 'error'; pnlEl.textContent = 'Error loading P&L';  // ← FIX: update both
+    }
 }
+
   function updateTimestamp() {
   const el = document.getElementById('last-update');
   if (el) el.textContent = 'Last updated: ' + new Date().toLocaleString();
 }
 
   // ── Init ────────────────────────────────────────────────────────────────────
-  function init() {
-  // No auto-load — all data loads on tab click only
+  async function init() {
+  fetchBotRunningStatus(); // fire & forget
+  loadBalance();
+  await loadBotStatus();
+  loadTradeData(1);
   updateTimestamp();
 }
 
@@ -1023,6 +1033,59 @@ function updateStatusBadge() {
       html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div></div></div>`;
       el.innerHTML=html;
     }
+    function renderDailySummary(containerId, trades, portfolioValue) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!trades || !trades.length) { el.innerHTML = ''; return; }
+
+    const dayMap = {};
+    for (const t of trades) {
+        const tsRaw = t.trade_timestamp || t.timestamp || 0;
+        const tsSec = tsRaw > 1e10 ? tsRaw / 1000 : tsRaw;
+        const d = new Date(tsSec * 1000);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        if (!dayMap[key]) dayMap[key] = { label, trades: [] };
+        dayMap[key].trades.push(t);
+    }
+
+    const pos = 'color:#15803d;font-weight:700', neg = 'color:#dc2626;font-weight:700';
+    const rows = Object.keys(dayMap).sort().map(key => {
+        const { label, trades: dt } = dayMap[key];
+        const s = computePnlStats(dt);
+        const spreadPct = s.avgBuyPrice > 0 ? (s.spread / s.avgBuyPrice * 100) : 0;
+        const spreadOk = spreadPct > 0;
+        const ret = portfolioValue > 0 ? (s.netPnl / portfolioValue * 100) : null;
+        const netDisplay = (s.netEqtyChange >= 0 ? '+' : '') + s.netEqtyChange.toFixed(6);
+        return `<tr>
+            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${label}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">
+                <span style="${spreadOk ? pos : neg}">${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%</span>
+                ${spreadOk ? '✅' : '❌'}
+            </td>
+            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;${s.netEqtyChange > 0 ? pos : s.netEqtyChange < 0 ? neg : ''}">
+                ${netDisplay}
+            </td>
+            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;${ret === null ? '' : ret >= 0 ? pos : neg}">
+                ${ret === null ? '—' : (ret >= 0 ? '+' : '') + ret.toFixed(3) + '%'}
+            </td>
+        </tr>`;
+    }).join('');
+
+    el.innerHTML = `<div style="overflow-x:auto;margin-top:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr>
+                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Day</th>
+                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Spread</th>
+                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Net BTC</th>
+                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Return %</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+   }
+
+    
     function hmCellClick(cid,dayKey,hour,cellEl){
       document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
       const detailEl=document.getElementById(cid+'-detail');if(!detailEl)return;
@@ -1042,7 +1105,7 @@ function updateStatusBadge() {
         const qty=parseFloat(String(t.quantity||'0').replace(/\.$/,''));
         const price=parseFloat(t.price||0),val=(qty*price).toFixed(4);
         const isBuy=(t.trade_type||'').toUpperCase()==='BUY';
-        rows+=`<tr><td>${time}</td><td><span class="pill-${isBuy?'buy':'sell'}" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;">${isBuy?'BUY':'SELL'}</span></td><td>${price}</td><td>${Math.round(qty).toLocaleString()}</td><td>$${val}</td></tr>`;
+        rows+=`<tr><td>${time}</td><td><span class="pill-${isBuy?'buy':'sell'}" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;">${isBuy?'BUY':'SELL'}</span></td><td>${price.toFixed(2)}</td><td>${qty.toFixed(6)}</td><td>$${val}</td></tr>`;
       }
       detailEl.innerHTML=`<div class="hm-detail"><div class="hm-detail-header"><span>&#128336; ${dayLabel} &nbsp;${hour}:00\u202f\u2014\u202f${(hour+1)%24}:00 &nbsp;&middot;&nbsp; ${trades.length} trade${trades.length>1?'s':''}</span><span class="hm-detail-close" onclick="document.getElementById('${cid}-detail').innerHTML='';document.querySelectorAll('#${cid} .hm-cell.selected').forEach(e=>{e.classList.remove('selected');e.dataset.open='';})">&#x2715;</span></div><div style="overflow-x:auto;"><table><thead><tr><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Time</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Side</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Price</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Qty</th><th style="padding:5px 10px;text-align:left;font-size:11px;color:#6b7280;">Value</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }
@@ -1057,9 +1120,11 @@ function updateStatusBadge() {
     el.className = 'loading'; el.textContent = 'Loading heatmap...';
     if (det) det.innerHTML = '';
     try {
-      var data = await fetchWithAuth('/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=' + days + '&verbose=false&timeout=30');
-      var t = (data && data.data && data.data.trades) ? data.data.trades : [];
+      var data = await fetchWithAuth('/bot-orchestration/843b015973491f3e50405a3e5993d3a2a30c207c/history?days=' + days + '&verbose=false&timeout=8');
+      //var t = (data && data.data && data.data.trades) ? data.data.trades : [];
+      var t = data?.response?.data?.data?.trades || [];
       renderHeatmap('activity-btc', t, days);
+      renderDailySummary('daily-summary-btc', t, window.btcPortfolioValue || 0);
     } catch(e) {
       el.className = ''; el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
     }
@@ -1079,8 +1144,7 @@ function updateStatusBadge() {
     } else if (name === 'activity') {
       var btn = document.querySelector('#activity-btc-days .days-btn.active');
       var days = btn ? parseInt(btn.dataset.days) : 14;
-      var hm = document.getElementById('activity-btc');
-      if (hm && !hm.querySelector('.hm-wrap')) loadActivityBtc(days);
+      loadActivityBtc(days);
     }
   }
 
@@ -1089,3 +1153,4 @@ function updateStatusBadge() {
 </script>
 </body>
 </html>
+
