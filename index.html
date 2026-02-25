@@ -433,7 +433,6 @@
   <script>
     // Vercel proxy base (server-side credentials)
     const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
-    const REFRESH_INTERVAL = 120000;
 
     // Generic fetch via proxy
     async function fetchWithAuth(endpoint) {
@@ -1179,7 +1178,7 @@ async function loadGateioBalance() {
     // ── UPTIME ───────────────────────────────────────────────────────────────
     const UPTIME_CONFIG={kucoin:{start:new Date('2026-02-01T00:00:00')},gateio:{start:null}};
     function _dk(ex){return`uptime_down_s_${ex}`;}
-    function trackDowntime(ex,ok){if(!ok){const k=_dk(ex);localStorage.setItem(k,parseInt(localStorage.getItem(k)||'0')+Math.round(REFRESH_INTERVAL/1000));}}
+    function trackDowntime(ex,ok){if(!ok){const k=_dk(ex);localStorage.setItem(k,parseInt(localStorage.getItem(k)||'0')+120);}}
     function getUptimeStats(ex){
       const cfg=UPTIME_CONFIG[ex];if(!cfg?.start)return null;
       const tot=(Date.now()-cfg.start.getTime())/1000,dn=parseInt(localStorage.getItem(_dk(ex))||'0'),up=Math.max(0,tot-dn);
@@ -1286,60 +1285,6 @@ async function loadGateioBalance() {
       html+=`<span style="font-size:10px;color:#6e7681;">max (${maxVal}/hr) · tap a cell to see trades</span></div></div></div>`;
       el.innerHTML=html;
     }
-    function renderDailySummary(containerId, trades, portfolioValue) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    if (!trades || !trades.length) { el.innerHTML = ''; return; }
-
-    // Group trades by calendar day
-    const dayMap = {};
-    for (const t of trades) {
-        const tsRaw = t.trade_timestamp || t.timestamp || 0;
-        const tsSec = tsRaw > 1e10 ? tsRaw / 1000 : tsRaw;
-        const d = new Date(tsSec * 1000);
-        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        if (!dayMap[key]) dayMap[key] = { label, trades: [] };
-        dayMap[key].trades.push(t);
-    }
-
-    const rows = Object.keys(dayMap).sort().map(key => {
-        const { label, trades: dt } = dayMap[key];
-        const s = computePnlStats(dt);
-        const spreadPct = s.avgBuyPrice > 0 ? (s.spread / s.avgBuyPrice * 100) : 0;
-        const spreadOk = spreadPct > 0;
-        const ret = portfolioValue > 0 ? (s.netPnl / portfolioValue * 100) : null;
-        const pos = 'color:#15803d;font-weight:700', neg = 'color:#dc2626;font-weight:700';
-
-        return `<tr>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${label}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">
-                <span style="${spreadOk ? pos : neg}">${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%</span>
-                ${spreadOk ? ' ✅' : ' ❌'}
-            </td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;${s.netEqtyChange > 0 ? pos : s.netEqtyChange < 0 ? neg : ''}">
-                ${s.netEqtyChange > 0 ? '+' : ''}${Math.round(s.netEqtyChange).toLocaleString()}
-            </td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;${ret === null ? '' : ret >= 0 ? pos : neg}">
-                ${ret === null ? '—' : (ret >= 0 ? '+' : '') + ret.toFixed(3) + '%'}
-            </td>
-        </tr>`;
-    }).join('');
-
-    el.innerHTML = `<div style="overflow-x:auto;margin-top:16px">
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
-            <thead><tr>
-                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Day</th>
-                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Spread</th>
-                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Net EQTY</th>
-                <th style="text-align:left;padding:8px 10px;border-bottom:2px solid #667eea;color:#374151">Return %</th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-    </div>`;
-}
-
-
     function hmCellClick(cid,dayKey,hour,cellEl){
       document.querySelectorAll(`#${cid} .hm-cell.selected`).forEach(el=>el.classList.remove('selected'));
       const detailEl=document.getElementById(cid+'-detail');if(!detailEl)return;
@@ -1397,7 +1342,6 @@ async function loadGateioBalance() {
         const data=await fetchWithAuth(`/bot-orchestration/ea5d7b611fd1da6ad5bffd559bac3c0ed6ed11d0/history?days=${days}&verbose=false&timeout=30`);
         const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
         renderHeatmap('activity-kucoin',t,days);
-        renderDailySummary('daily-summary-kucoin', t, window.kucoinPortfolioValue || window.eqtyBotMetrics?.total_value_usdt || 0);
       }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;}
     }
     async function loadActivityGateio(days=14){
@@ -1408,7 +1352,6 @@ async function loadGateioBalance() {
         const data=await fetchWithAuth(`/bot-orchestration/da6132e324292f6f7b914b58333808506f741db0/history?days=${days}&verbose=false&timeout=30`);
         const t=data?.response?.data?.data?.trades||data?.response?.data?.trades||data?.data?.trades||data.trades||[];
         renderHeatmap('activity-gateio',t,days);
-        renderDailySummary('daily-summary-gateio', t, window.gateioPortfolioValue || window.gateioMetrics?.total_value_usdt || 0);
       }catch(e){el.classList.remove('loading');el.innerHTML=`<div class="error">Error: ${e.message}</div>`;}
     }
 
@@ -1417,9 +1360,6 @@ async function loadGateioBalance() {
 
     // -------- Initial load --------
     syncChips(['chip-docker']);
-    refreshAll();
-    fetchBotRunningStatus();
-    setInterval(fetchBotRunningStatus, REFRESH_INTERVAL);
   </script>
   <div id="tab-activity" class="tab-content">
     <div class="activity-grid">
@@ -1433,7 +1373,6 @@ async function loadGateioBalance() {
         </h2>
         <div id="activity-kucoin" class="loading">Loading heatmap...</div>
         <div id="activity-kucoin-detail"></div>
-        <div id="daily-summary-kucoin"></div>
       </div>
       <div class="card">
         <h2>&#128200; Gate.io Activity
@@ -1445,10 +1384,8 @@ async function loadGateioBalance() {
         </h2>
         <div id="activity-gateio" class="loading">Loading heatmap...</div>
         <div id="activity-gateio-detail"></div>
-        <div id="daily-summary-gateio"></div>
       </div>
     </div>
   </div>
 </body>
 </html>
-
