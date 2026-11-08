@@ -442,7 +442,7 @@
 
   <script>
     // Vercel proxy base (server-side credentials)
-    const API_BASE = 'https://docker-proxy-eta.vercel.app/api/docker';
+    const API_BASE = 'https://eqty-proxy.eqtydao.workers.dev/';
 
     // Generic fetch via proxy
     async function fetchWithAuth(endpoint) {
@@ -680,7 +680,7 @@ async function fetchMQTTStatus() {
 // Fetch bot running status from metrics API
 async function fetchBotRunningStatus() {
   try {
-    const response = await fetch('https://docker-proxy-eta.vercel.app/api/metrics');
+    const response = await fetch('https://eqty-metrics.eqtydao.workers.dev/');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     
